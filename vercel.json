@@ -6,11 +6,7 @@
     "api/index.js": {
       "maxDuration": 300,
       "memory": 1024,
-      "includeFiles": [
-        "node_modules/tesseract.js/worker-script/**",
-        "node_modules/tesseract.js-core/**",
-        "node_modules/pdfjs-dist/standard_fonts/**"
-      ]
+      "includeFiles": "node_modules/{tesseract.js/worker-script,tesseract.js-core,pdfjs-dist/standard_fonts}/**"
     }
   },
   "rewrites": [
