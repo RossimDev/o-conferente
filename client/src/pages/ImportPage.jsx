@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { api, fmtDate, fmtQty } from '../api.js';
+import { api, fmtDate, fmtQty, authHeaders } from '../api.js';
 import { useApp } from '../App.jsx';
 
 export default function ImportPage() {
@@ -8,35 +8,66 @@ export default function ImportPage() {
   const { notify } = useApp();
   const [drag, setDrag] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState('');
   const [docs, setDocs] = useState([]);
+  const [uploadMode, setUploadMode] = useState('multipart');
   const fileRef = useRef(null);
   const camRef = useRef(null);
 
   const load = () => api('/documents').then((r) => setDocs(r.documents)).catch(() => {});
   useEffect(() => {
+    api('/health').then((h) => setUploadMode(h.upload_mode || 'multipart')).catch(() => {});
     load();
     const iv = setInterval(() => {
-      api('/documents').then((r) => {
-        setDocs(r.documents);
-      }).catch(() => {});
+      api('/documents').then((r) => setDocs(r.documents)).catch(() => {});
     }, 2500);
     return () => clearInterval(iv);
   }, []);
 
+  const uploadChunked = async (file) => {
+    setProgress(`Enviando ${file.name}…`);
+    const start = await api('/documents/uploads/start', { method: 'POST', body: { original_name: file.name } });
+    const chunkSize = start.chunk_size || 2 * 1024 * 1024;
+    const total = Math.ceil(file.size / chunkSize) || 1;
+    for (let i = 0; i < total; i++) {
+      const slice = file.slice(i * chunkSize, Math.min((i + 1) * chunkSize, file.size));
+      const res = await fetch(`/api/documents/uploads/${start.upload_id}/chunk/${i}`, {
+        method: 'PUT',
+        headers: { ...authHeaders() },
+        body: slice
+      });
+      if (!res.ok) throw new Error(`Falha no envio do pedaço ${i + 1}`);
+      setProgress(`Enviando ${file.name} — ${Math.round(((i + 1) / total) * 100)}%`);
+    }
+    const done = await api(`/documents/uploads/${start.upload_id}/complete`, {
+      method: 'POST',
+      body: { original_name: file.name, mime_type: file.type || 'application/octet-stream' }
+    });
+    setProgress(`Processando ${file.name}…`);
+    await api(`/documents/${done.id}/process`, { method: 'POST' }).catch(() => {});
+    return done;
+  };
+
   const upload = async (fileList) => {
     const files = Array.from(fileList || []);
     if (files.length === 0) return;
-    const fd = new FormData();
-    files.forEach((f) => fd.append('files', f));
     setUploading(true);
     try {
-      const r = await api('/documents/upload', { method: 'POST', formData: fd });
-      notify(`${r.documents.length} documento(s) enviado(s). Processando…`);
+      if (uploadMode === 'chunked') {
+        for (const f of files) await uploadChunked(f);
+        notify(`${files.length} documento(s) enviado(s) e processado(s).`);
+      } else {
+        const fd = new FormData();
+        files.forEach((f) => fd.append('files', f));
+        const r = await api('/documents/upload', { method: 'POST', formData: fd });
+        notify(`${r.documents.length} documento(s) enviado(s). Processando…`);
+      }
       load();
     } catch (e) {
       notify(e.message, 'err');
     } finally {
       setUploading(false);
+      setProgress('');
     }
   };
 
@@ -76,7 +107,7 @@ export default function ImportPage() {
         <input ref={camRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => upload(e.target.files)} />
       </div>
 
-      {uploading && <p className="center mt">Enviando arquivos…</p>}
+      {uploading && <p className="center mt">{progress || 'Enviando arquivos…'}</p>}
 
       <div className="section-title">
         <h2>Documentos recentes</h2>

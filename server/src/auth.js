@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
-import { db } from './db.js';
+import { one, run } from './db.js';
 import { TOKEN_TTL_DAYS } from './config.js';
 
 export function hashPassword(plain) {
@@ -11,36 +11,41 @@ export function verifyPassword(plain, hash) {
   return bcrypt.compareSync(plain, hash);
 }
 
-export function createToken(userId) {
+export async function createToken(userId) {
   const token = crypto.randomBytes(32).toString('hex');
   const expires = new Date(Date.now() + TOKEN_TTL_DAYS * 86400000).toISOString();
-  db.prepare('INSERT INTO auth_tokens (token, user_id, expires_at) VALUES (?, ?, ?)').run(token, userId, expires);
+  await run('INSERT INTO auth_tokens (token, user_id, expires_at) VALUES (?, ?, ?)', token, userId, expires);
   return { token, expires_at: expires };
 }
 
-export function revokeToken(token) {
-  db.prepare('DELETE FROM auth_tokens WHERE token = ?').run(token);
+export async function revokeToken(token) {
+  await run('DELETE FROM auth_tokens WHERE token = ?', token);
 }
 
-export function getUserByToken(token) {
+export async function getUserByToken(token) {
   if (!token) return null;
-  const row = db.prepare(`
+  const row = await one(`
     SELECT u.id, u.username, u.name, u.role, t.expires_at
     FROM auth_tokens t JOIN users u ON u.id = t.user_id
-    WHERE t.token = ? AND t.expires_at > datetime('now')`).get(token);
+    WHERE t.token = ? AND t.expires_at > datetime('now')`, token);
   return row || null;
 }
 
-export function requireAuth(req, res, next) {
-  const header = req.headers.authorization || '';
-  const token = header.startsWith('Bearer ') ? header.slice(7) : (req.query.token || null);
-  const user = getUserByToken(token);
-  if (!user) return res.status(401).json({ error: 'Não autenticado' });
-  req.user = user;
-  req.token = token;
-  next();
+export async function requireAuth(req, res, next) {
+  try {
+    const header = req.headers.authorization || '';
+    const token = header.startsWith('Bearer ') ? header.slice(7) : (req.query.token || null);
+    const user = await getUserByToken(token);
+    if (!user) return res.status(401).json({ error: 'Não autenticado' });
+    req.user = user;
+    req.token = token;
+    next();
+  } catch (err) {
+    next(err);
+  }
 }
 
-export function userCount() {
-  return db.prepare('SELECT COUNT(*) c FROM users').get().c;
+export async function userCount() {
+  const row = await one('SELECT COUNT(*) c FROM users');
+  return row ? Number(row.c) : 0;
 }

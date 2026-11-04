@@ -4,7 +4,7 @@ import { api, setToken } from '../api.js';
 import { useApp } from '../App.jsx';
 
 export default function Login() {
-  const { setUser, needsSetup, setNeedsSetup, notify } = useApp();
+  const { setUser, needsSetup, setNeedsSetup, notify, health, setHealth } = useApp();
   const nav = useNavigate();
   const [mode, setMode] = useState('login');
   const [username, setUsername] = useState('');
@@ -13,7 +13,10 @@ export default function Login() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    api('/health').then((h) => setNeedsSetup(!!h.needs_setup)).catch(() => {});
+    api('/health').then((h) => {
+      setHealth(h);
+      setNeedsSetup(!!h.needs_setup);
+    }).catch((e) => setHealth({ ok: false, error: e.message }));
   }, []);
 
   useEffect(() => {
@@ -37,6 +40,33 @@ export default function Login() {
       setBusy(false);
     }
   };
+
+  if (health && health.ok === false) {
+    return (
+      <div className="login-wrap">
+        <div className="login-card">
+          <div className="brand">
+            <img src="/icon-192.png" alt="" width="46" height="46" />
+            <span>O Conferente</span>
+          </div>
+          <h2 style={{ textAlign: 'center' }}>Quase lá — falta configurar o banco</h2>
+          <p className="muted">
+            O aplicativo está publicado, mas o banco de dados da nuvem ainda não foi conectado.
+            Em até 2 minutos:
+          </p>
+          <ol style={{ paddingLeft: 20, lineHeight: 1.9, fontSize: '.95rem' }}>
+            <li>Crie uma conta grátis em <b>turso.tech</b> (login com GitHub)</li>
+            <li>Crie um database chamado <b>o-conferente</b></li>
+            <li>Em <b>Create Token</b>, gere um token e informe ao assistente de deploy</li>
+          </ol>
+          <p className="muted" style={{ fontSize: '.85rem' }}>
+            As variáveis <span className="mono">TURSO_DATABASE_URL</span> e <span className="mono">TURSO_AUTH_TOKEN</span> serão configuradas automaticamente no projeto.
+          </p>
+          <button className="btn secondary" style={{ width: '100%' }} onClick={() => location.reload()}>Já configurei — verificar</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="login-wrap">

@@ -1,18 +1,34 @@
 import { createWorker } from 'tesseract.js';
 import sharp from 'sharp';
+import fs from 'node:fs';
+import path from 'node:path';
+import { createRequire } from 'node:module';
 import { TESSDATA_DIR, OCR_LANGUAGES } from '../config.js';
+
+const require = createRequire(import.meta.url);
+const REMOTE_TESSDATA = 'https://github.com/naptha/tessdata/raw/gh-pages/4.0.0';
 
 let workerPromise = null;
 
 export async function getOcrWorker() {
   if (!workerPromise) {
     workerPromise = (async () => {
-      const worker = await createWorker(OCR_LANGUAGES, 1, {
-        langPath: TESSDATA_DIR,
+      // usa dados locais quando existem (self-hosted); senão baixa uma vez e cacheia em /tmp
+      const hasLocal = fs.existsSync(path.join(TESSDATA_DIR, 'eng.traineddata.gz'));
+      const opts = {
+        langPath: hasLocal ? TESSDATA_DIR : process.env.OC_TESSDATA_URL || REMOTE_TESSDATA,
         gzip: true,
-        cachePath: TESSDATA_DIR,
+        cachePath: hasLocal ? TESSDATA_DIR : '/tmp/tesscache',
         logger: () => {}
-      });
+      };
+      if (!hasLocal) {
+        try { fs.mkdirSync('/tmp/tesscache', { recursive: true }); } catch { /* ok */ }
+      }
+      // worker da versão Node (worker_threads) — obrigatório em ambiente serverless
+      try {
+        opts.workerPath = require.resolve('tesseract.js/worker-script/node/index.js');
+      } catch { /* fallback para a resolução padrão */ }
+      const worker = await createWorker(OCR_LANGUAGES, 1, opts);
       return worker;
     })();
   }

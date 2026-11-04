@@ -56,6 +56,7 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [ready, setReady] = useState(false);
   const [needsSetup, setNeedsSetup] = useState(false);
+  const [health, setHealth] = useState(null);
   const [toast, setToast] = useState(null);
   const [offlinePending, setOfflinePending] = useState(0);
   const nav = useNavigate();
@@ -70,12 +71,15 @@ export default function App() {
     (async () => {
       try {
         const h = await api('/health');
+        setHealth(h);
         setNeedsSetup(!!h.needs_setup);
         if (getToken()) {
           const me = await api('/auth/me');
           setUser(me.user);
         }
-      } catch { /* servidor indisponível */ }
+      } catch (e) {
+        setHealth({ ok: false, error: e.message });
+      }
       setReady(true);
     })();
   }, []);
@@ -97,7 +101,7 @@ export default function App() {
     nav('/login');
   };
 
-  const ctx = { user, setUser, notify, needsSetup, setNeedsSetup, refreshUser: async () => {
+  const ctx = { user, setUser, notify, needsSetup, setNeedsSetup, health, setHealth, refreshUser: async () => {
     try { const me = await api('/auth/me'); setUser(me.user); } catch { /* ok */ }
   } };
 
