@@ -1,0 +1,32 @@
+{
+  "name": "o-conferente-server",
+  "version": "1.0.0",
+  "description": "O Conferente - assistente inteligente de conferência de produtos e documentos",
+  "type": "module",
+  "main": "server/src/index.js",
+  "scripts": {
+    "start": "node server/src/index.js",
+    "dev": "node --watch server/src/index.js",
+    "build:client": "cd client && npm run build",
+    "test": "node tools/run-tests.js",
+    "seed": "node tools/seed.js",
+    "make:docs": "node tools/make-test-docs.js",
+    "download:ocr": "node tools/download-ocr.js"
+  },
+  "dependencies": {
+    "@napi-rs/canvas": "^0.1.65",
+    "adm-zip": "^0.5.16",
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.7.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "multer": "^2.5.0",
+    "pdfjs-dist": "^4.10.38",
+    "sharp": "^0.33.5",
+    "tesseract.js": "^5.1.1",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "pdfkit": "^0.15.2"
+  }
+}
