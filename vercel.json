@@ -6,7 +6,7 @@
     "api/index.js": {
       "maxDuration": 300,
       "memory": 1024,
-      "includeFiles": "node_modules/{tesseract.js/worker-script,tesseract.js-core,pdfjs-dist/standard_fonts}/**"
+      "includeFiles": "node_modules/{tesseract.js/worker-script,tesseract.js-core,pdfjs-dist/standard_fonts,pdfjs-dist/legacy/build,@napi-rs/canvas,@napi-rs/canvas-linux-x64-gnu}/**"
     }
   },
   "rewrites": [
