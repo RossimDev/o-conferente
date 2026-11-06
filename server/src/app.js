@@ -12,7 +12,7 @@ import searchRoutes from './routes/search.js';
 import conferenceRoutes from './routes/conference.js';
 import miscRoutes from './routes/misc.js';
 
-fs.mkdirSync(TMP_DIR, { recursive: true });
+try { fs.mkdirSync(TMP_DIR, { recursive: true }); } catch { /* fs somente leitura (serverless) */ }
 
 const app = express();
 app.use(cors());
