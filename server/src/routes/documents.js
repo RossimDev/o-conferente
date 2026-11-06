@@ -72,8 +72,15 @@ router.post('/upload', upload.array('files', 20), async (req, res, next) => {
           seq, originalName, stored_name, f.mimetype || 'application/octet-stream', size, req.user.id);
         const docId = info.lastRowid;
         await logHistory({ document_id: docId, action: 'documento_importado', new_values: { nome: originalName, seq, tamanho: size }, user_id: req.user.id });
-        enqueueProcessing(docId);
-        created.push({ id: docId, seq, original_name: originalName, status: 'pendente' });
+        if (isCloud() || process.env.VERCEL) {
+          // Serverless: não há fila em segundo plano — processa dentro da requisição.
+          await processDocument(docId);
+          const st = await one('SELECT status FROM documents WHERE id = ?', docId);
+          created.push({ id: docId, seq, original_name: originalName, status: st ? st.status : 'pendente' });
+        } else {
+          enqueueProcessing(docId);
+          created.push({ id: docId, seq, original_name: originalName, status: 'pendente' });
+        }
       } catch (err) {
         try { fs.unlinkSync(f.path); } catch { /* ok */ }
       }
@@ -87,7 +94,7 @@ router.post('/:id/process', async (req, res, next) => {
   try {
     const row = await one('SELECT * FROM documents WHERE id = ?', req.params.id);
     if (!row) return res.status(404).json({ error: 'Documento não encontrado.' });
-    if (isCloud()) {
+    if (isCloud() || process.env.VERCEL) {
       await processDocument(row.id);
     } else {
       await run(`UPDATE documents SET status = 'pendente', error = NULL WHERE id = ?`, row.id);
@@ -186,7 +193,7 @@ router.post('/:id/reprocess', async (req, res, next) => {
     const row = await one('SELECT * FROM documents WHERE id = ?', req.params.id);
     if (!row) return res.status(404).json({ error: 'Documento não encontrado.' });
     await run(`UPDATE documents SET status = 'pendente', error = NULL WHERE id = ?`, row.id);
-    if (isCloud()) {
+    if (isCloud() || process.env.VERCEL) {
       await processDocument(row.id);
     } else {
       enqueueProcessing(row.id);

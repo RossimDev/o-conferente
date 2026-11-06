@@ -15,7 +15,8 @@ const ROOT = path.join(__dirname, '..');
 const DOCS = path.join(ROOT, 'tests', 'docs');
 const TEST_DIR = '/tmp/oc-e2e';
 const PORT = 3999;
-const BASE = `http://localhost:${PORT}/api`;
+const REMOTE_BASE = process.env.OC_TEST_BASE ? process.env.OC_TEST_BASE.replace(/\/+$/, '') + '/api' : null;
+const BASE = REMOTE_BASE || `http://localhost:${PORT}/api`;
 
 fs.rmSync(TEST_DIR, { recursive: true, force: true });
 fs.mkdirSync(TEST_DIR, { recursive: true });
@@ -70,19 +71,22 @@ async function uploadFile(file) {
 }
 
 /* ------------------------------ execução ------------------------------ */
-const server = spawn('node', [path.join(ROOT, 'server', 'src', 'index.js')], {
-  env: {
-    ...process.env,
-    PORT: String(PORT),
-    OC_DB_PATH: path.join(TEST_DIR, 'conferente.db'),
-    OC_STORAGE_DIR: path.join(TEST_DIR, 'storage'),
-    OC_DATA_DIR: path.join(TEST_DIR, 'data')
-  },
-  stdio: ['ignore', 'pipe', 'pipe']
-});
-server.stderr.on('data', (d) => process.stderr.write(`[servidor] ${d}`));
+let server = null;
+if (!REMOTE_BASE) {
+  server = spawn('node', [path.join(ROOT, 'server', 'src', 'index.js')], {
+    env: {
+      ...process.env,
+      PORT: String(PORT),
+      OC_DB_PATH: path.join(TEST_DIR, 'conferente.db'),
+      OC_STORAGE_DIR: path.join(TEST_DIR, 'storage'),
+      OC_DATA_DIR: path.join(TEST_DIR, 'data')
+    },
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+  server.stderr.on('data', (d) => process.stderr.write(`[servidor] ${d}`));
+}
 
-const cleanup = () => { try { server.kill('SIGKILL'); } catch { /* ok */ } };
+const cleanup = () => { try { server && server.kill('SIGKILL'); } catch { /* ok */ } };
 process.on('exit', cleanup);
 
 async function waitServer() {
@@ -97,7 +101,7 @@ async function waitServer() {
 }
 
 try {
-  await waitServer();
+  if (!REMOTE_BASE) await waitServer();
 
   /* ---------- Preparação: configuração inicial + login ---------- */
   const setup = await req('POST', '/auth/setup', { body: { username: 'admin', password: 'admin123', name: 'Administrador' } });
