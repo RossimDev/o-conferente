@@ -17,6 +17,7 @@ const TEST_DIR = '/tmp/oc-e2e';
 const PORT = 3999;
 const REMOTE_BASE = process.env.OC_TEST_BASE ? process.env.OC_TEST_BASE.replace(/\/+$/, '') + '/api' : null;
 const BASE = REMOTE_BASE || `http://localhost:${PORT}/api`;
+const ORIGIN = REMOTE_BASE ? REMOTE_BASE.replace(/\/api$/, '') : `http://localhost:${PORT}`;
 
 fs.rmSync(TEST_DIR, { recursive: true, force: true });
 fs.mkdirSync(TEST_DIR, { recursive: true });
@@ -304,12 +305,12 @@ try {
     `CSV + XLSX gerados; backup de ${(zipBuf.length / 1024).toFixed(0)} KB restaurado com dados íntegros`);
 
   /* ---------- Teste 14: responsividade / multiplataforma (PWA) ---------- */
-  const appHtml = await (await fetch(`http://localhost:${PORT}/`)).text();
+  const appHtml = await (await fetch(`${ORIGIN}/`)).text();
   assert(appHtml.includes('viewport'), 'meta viewport ausente');
   assert(appHtml.includes('manifest') || appHtml.includes('webmanifest'), 'manifest PWA ausente');
-  const sw = await fetch(`http://localhost:${PORT}/sw.js`);
+  const sw = await fetch(`${ORIGIN}/sw.js`);
   assert(sw.ok, 'service worker ausente');
-  const manifest = await fetch(`http://localhost:${PORT}/manifest.webmanifest`);
+  const manifest = await fetch(`${ORIGIN}/manifest.webmanifest`);
   const mf = await manifest.json();
   assert(mf.display === 'standalone', 'manifest não é instalável');
   assert(/sm\.css|index-.*\.css/.test(appHtml) || appHtml.includes('assets'), 'assets do app ausentes');
