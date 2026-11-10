@@ -104,7 +104,13 @@ try {
   if (!REMOTE_BASE) await waitServer();
 
   /* ---------- Preparação: configuração inicial + login ---------- */
-  const setup = await req('POST', '/auth/setup', { body: { username: 'admin', password: 'admin123', name: 'Administrador' } });
+  let setup = null;
+  try {
+    setup = await req('POST', '/auth/setup', { body: { username: 'admin', password: 'admin123', name: 'Administrador' } });
+  } catch { /* já configurado em execuções anteriores */ }
+  if (!setup || !setup.token) {
+    setup = await req('POST', '/auth/login', { body: { username: 'admin', password: 'admin123' } });
+  }
   token = setup.token;
   report('Configuração inicial e autenticação', !!token);
 

@@ -190,6 +190,14 @@ Nenhuma informação é inventada: campos não identificados no documento perman
 - ✅ Diferentes tamanhos de tela (layout responsivo, otimizado para uso com uma mão)
 - ✅ Uso offline do app shell + fila de sincronização de marcações
 
+## 10. Publicação na Vercel (nuvem)
+
+- **URL de produção:** `https://o-conferente-rossimdevs-projects.vercel.app` (projeto `o-conferente`)
+- **Publicação automática:** cada `git push` na branch `main` do repositório dispara o build e atualiza o site.
+- **Banco de dados:** o app roda com seu banco SQLite próprio, sem serviços externos. Na nuvem, os dados permanecem ativos durante o uso e são recriados quando o serviço reinicia — por isso use o **Backup** (Ajustes → Backup) periodicamente para salvar o acervo (dados + originais em um `.zip`), e **Restaurar** para recarregá-lo quando necessário.
+- **Limites da nuvem:** uploads de até 200 MB; processamento de OCR pode levar alguns segundos por página.
+- **Credenciais iniciais:** `admin` / `admin123` (troque em Ajustes após o primeiro acesso).
+
 ---
 
 **O Conferente** — importe uma vez, encontre em segundos.

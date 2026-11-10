@@ -49,20 +49,15 @@ export default function Login() {
             <img src="/icon-192.png" alt="" width="46" height="46" />
             <span>O Conferente</span>
           </div>
-          <h2 style={{ textAlign: 'center' }}>Quase lá — falta configurar o banco</h2>
+          <h2 style={{ textAlign: 'center' }}>Banco de dados indisponível</h2>
           <p className="muted">
-            O aplicativo está publicado, mas o banco de dados da nuvem ainda não foi conectado.
-            Em até 2 minutos:
+            O aplicativo está publicado, mas não foi possível acessar o banco de dados no momento.
+            Isso costuma ser temporário — aguarde alguns segundos e tente novamente.
           </p>
-          <ol style={{ paddingLeft: 20, lineHeight: 1.9, fontSize: '.95rem' }}>
-            <li>Crie uma conta grátis em <b>turso.tech</b> (login com GitHub)</li>
-            <li>Crie um database chamado <b>o-conferente</b></li>
-            <li>Em <b>Create Token</b>, gere um token e informe ao assistente de deploy</li>
-          </ol>
           <p className="muted" style={{ fontSize: '.85rem' }}>
-            As variáveis <span className="mono">TURSO_DATABASE_URL</span> e <span className="mono">TURSO_AUTH_TOKEN</span> serão configuradas automaticamente no projeto.
+            Se o problema persistir, verifique os registros do serviço (logs) ou o armazenamento do servidor.
           </p>
-          <button className="btn secondary" style={{ width: '100%' }} onClick={() => location.reload()}>Já configurei — verificar</button>
+          <button className="btn secondary" style={{ width: '100%' }} onClick={() => location.reload()}>Tentar novamente</button>
         </div>
       </div>
     );
