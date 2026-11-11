@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Routes, Route, NavLink, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { api, getToken, setToken, flushOfflineQueue, pendingOfflineOps } from './api.js';
+import { loadLocalBackup, restoreFromLocal } from './localBackup.js';
 import Login from './pages/Login.jsx';
 import Home from './pages/Home.jsx';
 import SearchPage from './pages/SearchPage.jsx';
@@ -70,12 +71,26 @@ export default function App() {
   useEffect(() => {
     (async () => {
       try {
-        const h = await api('/health');
+        let h = await api('/health');
+        // Banco novo (reinício da hospedagem)? Restaura a conta e os dados
+        // salvos automaticamente neste dispositivo.
+        if (h.needs_setup) {
+          const saved = await loadLocalBackup();
+          if (saved) {
+            try {
+              await restoreFromLocal();
+              h = await api('/health');
+              notify('Conta e dados restaurados deste dispositivo.');
+            } catch { /* segue para a tela inicial */ }
+          }
+        }
         setHealth(h);
         setNeedsSetup(!!h.needs_setup);
         if (getToken()) {
-          const me = await api('/auth/me');
-          setUser(me.user);
+          try {
+            const me = await api('/auth/me');
+            setUser(me.user);
+          } catch { /* token não vale mais — mostra o login */ }
         }
       } catch (e) {
         setHealth({ ok: false, error: e.message });

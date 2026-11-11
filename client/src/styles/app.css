@@ -356,3 +356,14 @@ table.data input, table.data select {
 .flex.between { justify-content: space-between; }
 .mt { margin-top: 14px; }
 .mb { margin-bottom: 14px; }
+
+/* link dentro de textos */
+.linklike {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent, #2563eb);
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+}

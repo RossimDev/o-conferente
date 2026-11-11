@@ -1,6 +1,8 @@
 const TOKEN_KEY = 'oc_token';
 const QUEUE_KEY = 'oc_sync_queue';
 
+import { scheduleLocalBackup } from './localBackup.js';
+
 export function getToken() { return localStorage.getItem(TOKEN_KEY); }
 export function setToken(t) {
   if (t) localStorage.setItem(TOKEN_KEY, t);
@@ -43,7 +45,13 @@ export async function api(path, { method = 'GET', body, formData, query, raw } =
     body: formData || (body ? JSON.stringify(body) : undefined)
   });
   if (raw) return res;
-  return handle(res);
+  const out = await handle(res);
+  // Após cada mudança, agenda uma cópia local automática (conta + dados).
+  if (method !== 'GET' && getToken()
+      && !path.startsWith('/auth') && !path.startsWith('/backup')) {
+    scheduleLocalBackup();
+  }
+  return out;
 }
 
 export function downloadUrl(path, query) {

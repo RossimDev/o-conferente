@@ -5,12 +5,20 @@ import AdmZip from 'adm-zip';
 import fs from 'node:fs';
 import path from 'node:path';
 import { one, all, run, batch, getSetting, setSetting, logHistory, isCloud, ensureSchema } from '../db.js';
-import { requireAuth } from '../auth.js';
+import { requireAuth, userCount } from '../auth.js';
 import { TMP_DIR } from '../config.js';
 import { purgeOldTrash, deleteOriginal, putDocFile, readDocBuffer, fileExists, safeFileName } from '../services/files.js';
 
 const router = Router();
-router.use(requireAuth);
+// Autenticação padrão; exceção: em banco totalmente vazio (primeira carga de um
+// novo ambiente), a restauração de backup é permitida sem login para que a conta
+// e os dados salvos no dispositivo do usuário possam ser recarregados.
+router.use(async (req, res, next) => {
+  try {
+    if (req.method === 'POST' && req.path === '/backup/restore' && (await userCount()) === 0) return next();
+    return requireAuth(req, res, next);
+  } catch (err) { return next(err); }
+});
 
 /* ----------------------------- Estatísticas ----------------------------- */
 router.get('/stats', async (req, res, next) => {
@@ -109,6 +117,8 @@ router.get('/export/records', async (req, res, next) => {
 
 /* --------------------- Backup portátil (dump.json + arquivos) --------------------- */
 const DUMP_TABLES = [
+  ['users', 'id'],
+  ['auth_tokens', 'token'],
   ['documents', 'id'],
   ['records', 'id'],
   ['conference_sessions', 'id'],
@@ -175,7 +185,7 @@ router.post('/backup/restore', uploadRestore.single('backup'), async (req, res, 
       const name = path.basename(entry.entryName);
       await putDocFile(name, entry.getData());
     }
-    await logHistory({ action: 'backup_restaurado', detail: 'Backup restaurado com sucesso.', user_id: req.user.id });
+    await logHistory({ action: 'backup_restaurado', detail: 'Backup restaurado com sucesso.', user_id: req.user ? req.user.id : null });
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: `Falha na restauração: ${err.message || err}` });

@@ -194,7 +194,8 @@ Nenhuma informação é inventada: campos não identificados no documento perman
 
 - **URL de produção:** `https://o-conferente-rossimdevs-projects.vercel.app` (projeto `o-conferente`)
 - **Publicação automática:** cada `git push` na branch `main` do repositório dispara o build e atualiza o site.
-- **Banco de dados:** o app roda com seu banco SQLite próprio, sem serviços externos. Na nuvem, os dados permanecem ativos durante o uso e são recriados quando o serviço reinicia — por isso use o **Backup** (Ajustes → Backup) periodicamente para salvar o acervo (dados + originais em um `.zip`), e **Restaurar** para recarregá-lo quando necessário.
+- **Banco de dados:** o app roda com seu banco SQLite próprio, sem serviços externos. Na nuvem, os dados permanecem ativos durante o uso; além disso, **uma cópia da conta e de tudo o que é feito é salva automaticamente neste dispositivo** — na próxima visita, o app restaura a conta e os dados sozinho e você apenas entra com sua senha (sem criar conta de novo).
+- **Backup extra:** use **Ajustes → Backup** para baixar um `.zip` com dados + originais (guarde em local seguro ou transfira para outro dispositivo via **Restaurar**).
 - **Limites da nuvem:** uploads de até 200 MB; processamento de OCR pode levar alguns segundos por página.
 - **Credenciais iniciais:** `admin` / `admin123` (troque em Ajustes após o primeiro acesso).
 

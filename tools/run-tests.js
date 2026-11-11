@@ -332,6 +332,60 @@ try {
   assert(hist.history.length >= 2, 'histórico insuficiente');
   report('Complementar: histórico com dados antes/depois', true, `${hist.history.length} eventos registrados`);
 
+  /* ---------- Complementar: conta restaurada em ambiente novo (sem cadastro) ---------- */
+  const bkRes = await fetch(BASE + '/backup/download', { headers: { Authorization: 'Bearer ' + token } });
+  const bkBuf = Buffer.from(await bkRes.arrayBuffer());
+  assert(bkBuf.slice(0, 2).toString() === 'PK', 'backup para restauração inválido');
+
+  // (a) em banco COM usuários, restaurar sem login deve ser recusado
+  const fdNo = new FormData();
+  fdNo.append('backup', new Blob([bkBuf]), 'b.zip');
+  const rej = await fetch(BASE + '/backup/restore', { method: 'POST', body: fdNo });
+  assert(rej.status === 401, `restauração sem login deveria ser recusada (veio ${rej.status})`);
+
+  // (b) em banco VAZIO (novo ambiente/reinício), restaurar sem login deve funcionar
+  const PORT2 = PORT + 1;
+  const srv2 = spawn('node', [path.join(ROOT, 'server', 'src', 'index.js')], {
+    env: {
+      ...process.env,
+      PORT: String(PORT2),
+      OC_DB_PATH: path.join(TEST_DIR, 'fresh', 'conferente.db'),
+      OC_STORAGE_DIR: path.join(TEST_DIR, 'fresh', 'storage'),
+      OC_DATA_DIR: path.join(TEST_DIR, 'fresh', 'data')
+    },
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+  try {
+    let up = false;
+    for (let i = 0; i < 60 && !up; i++) {
+      try { const r = await fetch(`http://localhost:${PORT2}/api/health`); up = r.ok; } catch { /* subindo */ }
+      if (!up) await new Promise((r) => setTimeout(r, 500));
+    }
+    assert(up, 'servidor de teste (banco novo) não iniciou');
+
+    const fd2 = new FormData();
+    fd2.append('backup', new Blob([bkBuf]), 'b.zip');
+    const okRes = await fetch(`http://localhost:${PORT2}/api/backup/restore`, { method: 'POST', body: fd2 });
+    assert(okRes.ok, `restauração inicial sem login falhou (${okRes.status})`);
+
+    // a mesma conta volta com a MESMA senha — sem criar nada de novo
+    const lg = await fetch(`http://localhost:${PORT2}/api/auth/login`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'admin', password: 'admin123' })
+    });
+    const lgj = await lg.json();
+    assert(lgj.token, 'login com a conta restaurada falhou: ' + (lgj.error || ''));
+
+    // os dados feitos antes também voltam
+    const sr = await fetch(`http://localhost:${PORT2}/api/search?q=20001`, { headers: { Authorization: 'Bearer ' + lgj.token } });
+    const srj = await sr.json();
+    assert((srj.exact || []).length >= 1, 'os dados não voltaram na restauração inicial');
+  } finally {
+    try { srv2.kill('SIGKILL'); } catch { /* ok */ }
+  }
+  report('Complementar: conta restaurada em ambiente novo (sem cadastro)', true,
+    'restore sem login em banco vazio + acesso com a mesma senha + dados recuperados');
+
 } catch (err) {
   report('Execução interrompida', false, err.message);
   console.error(err);
