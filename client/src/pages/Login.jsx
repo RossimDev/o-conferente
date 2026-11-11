@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api, setToken } from '../api.js';
 import { useApp } from '../App.jsx';
 import { loadLocalBackup, restoreFromLocal, clearLocalBackup, getSavedUsername } from '../localBackup.js';
+import PasswordField, { ChevronIcon } from '../components/PasswordField.jsx';
 
 export default function Login() {
   const { setUser, needsSetup, setNeedsSetup, notify, health, setHealth } = useApp();
@@ -141,14 +142,28 @@ export default function Login() {
           <h2>Entrar</h2>
           <p className="muted">Acesse sua conta para continuar de onde parou.</p>
           <form onSubmit={doLogin}>
-            <label className="field">Usuário
-              <input value={username} onChange={(e) => setUsername(e.target.value)} required autoFocus autoComplete="username" />
-            </label>
-            <label className="field">Senha
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
-            </label>
+            <label className="field" htmlFor="pw-login-user">Usuário</label>
+            <div className="pw-wrap" style={{ marginTop: 0, marginBottom: 14 }}>
+              <input
+                id="pw-login-user"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                autoFocus
+                autoComplete="username"
+                style={{ paddingRight: 12 }}
+              />
+            </div>
+            <PasswordField
+              id="pw-login"
+              label="Senha"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+            />
             <button className="btn" style={{ width: '100%' }} disabled={busyLogin}>
               {busyLogin ? 'Aguarde…' : 'Entrar'}
+              {!busyLogin && <ChevronIcon />}
             </button>
           </form>
           {savedAccount && (
@@ -163,17 +178,41 @@ export default function Login() {
           <h2>Criar nova conta</h2>
           <p className="muted">Cadastre-se para importar documentos e realizar conferências.</p>
           <form onSubmit={doRegister}>
-            <label className="field">Nome
-              <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Seu nome" autoComplete="name" />
-            </label>
-            <label className="field">Usuário
-              <input value={newUsername} onChange={(e) => setNewUsername(e.target.value)} required autoComplete="username" placeholder="3 a 32 caracteres" />
-            </label>
-            <label className="field">Senha
-              <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={6} autoComplete="new-password" placeholder="Mínimo de 6 caracteres" />
-            </label>
+            <label className="field" htmlFor="reg-nome">Nome</label>
+            <div className="pw-wrap" style={{ marginTop: 0, marginBottom: 14 }}>
+              <input
+                id="reg-nome"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="Seu nome"
+                autoComplete="name"
+                style={{ paddingRight: 12 }}
+              />
+            </div>
+            <label className="field" htmlFor="reg-user">Usuário</label>
+            <div className="pw-wrap" style={{ marginTop: 0, marginBottom: 14 }}>
+              <input
+                id="reg-user"
+                value={newUsername}
+                onChange={(e) => setNewUsername(e.target.value)}
+                required
+                autoComplete="username"
+                placeholder="3 a 32 caracteres"
+                style={{ paddingRight: 12 }}
+              />
+            </div>
+            <PasswordField
+              id="reg-pw"
+              label="Senha"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              autoComplete="new-password"
+              minLength={6}
+              placeholder="Mínimo de 6 caracteres"
+            />
             <button className="btn" style={{ width: '100%' }} disabled={busyRegister}>
               {busyRegister ? 'Aguarde…' : 'Criar conta'}
+              {!busyRegister && <ChevronIcon />}
             </button>
           </form>
           <p className="muted hint center">

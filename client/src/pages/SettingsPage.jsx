@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { api, downloadUrl, setToken, getToken } from '../api.js';
 import { useApp } from '../App.jsx';
+import PasswordField from '../components/PasswordField.jsx';
 
 export default function SettingsPage() {
   const { user, notify, setUser } = useApp();
@@ -75,12 +76,21 @@ export default function SettingsPage() {
           <p>Conectado como <b>{user?.name || user?.username}</b> ({user?.role})</p>
           <form onSubmit={changePw}>
             <h3 className="mt">Alterar senha</h3>
-            <label className="field">Senha atual
-              <input type="password" value={pw.current_password} onChange={(e) => setPw({ ...pw, current_password: e.target.value })} required />
-            </label>
-            <label className="field">Nova senha
-              <input type="password" value={pw.new_password} onChange={(e) => setPw({ ...pw, new_password: e.target.value })} required minLength={6} />
-            </label>
+            <PasswordField
+              id="pw-current"
+              label="Senha atual"
+              value={pw.current_password}
+              onChange={(e) => setPw({ ...pw, current_password: e.target.value })}
+              autoComplete="current-password"
+            />
+            <PasswordField
+              id="pw-new"
+              label="Nova senha"
+              value={pw.new_password}
+              onChange={(e) => setPw({ ...pw, new_password: e.target.value })}
+              autoComplete="new-password"
+              minLength={6}
+            />
             <button className="btn">Alterar senha</button>
           </form>
         </div>
@@ -136,9 +146,14 @@ export default function SettingsPage() {
             <label className="field">Nome
               <input value={newUser.name} onChange={(e) => setNewUser({ ...newUser, name: e.target.value })} />
             </label>
-            <label className="field">Senha
-              <input type="password" value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} required minLength={6} />
-            </label>
+            <PasswordField
+              id="new-user-pw"
+              label="Senha"
+              value={newUser.password}
+              onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+              autoComplete="new-password"
+              minLength={6}
+            />
             <label className="field">Perfil
               <select value={newUser.role} onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}>
                 <option value="user">Usuário</option>
