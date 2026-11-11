@@ -28,16 +28,16 @@ router.get('/stats', async (req, res, next) => {
       return row ? Number(row.c) : 0;
     };
     const totals = {
-      registros: await c(`SELECT COUNT(*) c FROM records WHERE deleted_at IS NULL AND archived = 0`),
-      conferidos: await c(`SELECT COUNT(*) c FROM records WHERE deleted_at IS NULL AND archived = 0 AND status = 'conferido'`),
-      pendentes: await c(`SELECT COUNT(*) c FROM records WHERE deleted_at IS NULL AND archived = 0 AND status = 'pendente'`),
-      divergentes: await c(`SELECT COUNT(*) c FROM records WHERE deleted_at IS NULL AND archived = 0 AND status = 'divergente'`),
-      revisar: await c(`SELECT COUNT(*) c FROM records WHERE deleted_at IS NULL AND archived = 0 AND status = 'revisar'`),
-      favoritos: await c(`SELECT COUNT(*) c FROM records WHERE deleted_at IS NULL AND favorite = 1`),
-      revisao_dados: await c(`SELECT COUNT(*) c FROM records WHERE deleted_at IS NULL AND needs_review = 1`),
-      documentos: await c(`SELECT COUNT(*) c FROM documents WHERE deleted_at IS NULL`),
-      documentos_processando: await c(`SELECT COUNT(*) c FROM documents WHERE deleted_at IS NULL AND status IN ('pendente','processando')`),
-      lixeira: await c(`SELECT COUNT(*) c FROM records WHERE deleted_at IS NOT NULL`) + await c(`SELECT COUNT(*) c FROM documents WHERE deleted_at IS NOT NULL`)
+      registros: await c(`SELECT COUNT(*) c FROM records WHERE user_id = ? AND deleted_at IS NULL AND archived = 0`, req.user.id),
+      conferidos: await c(`SELECT COUNT(*) c FROM records WHERE user_id = ? AND deleted_at IS NULL AND archived = 0 AND status = 'conferido'`, req.user.id),
+      pendentes: await c(`SELECT COUNT(*) c FROM records WHERE user_id = ? AND deleted_at IS NULL AND archived = 0 AND status = 'pendente'`, req.user.id),
+      divergentes: await c(`SELECT COUNT(*) c FROM records WHERE user_id = ? AND deleted_at IS NULL AND archived = 0 AND status = 'divergente'`, req.user.id),
+      revisar: await c(`SELECT COUNT(*) c FROM records WHERE user_id = ? AND deleted_at IS NULL AND archived = 0 AND status = 'revisar'`, req.user.id),
+      favoritos: await c(`SELECT COUNT(*) c FROM records WHERE user_id = ? AND deleted_at IS NULL AND favorite = 1`, req.user.id),
+      revisao_dados: await c(`SELECT COUNT(*) c FROM records WHERE user_id = ? AND deleted_at IS NULL AND needs_review = 1`, req.user.id),
+      documentos: await c(`SELECT COUNT(*) c FROM documents WHERE created_by = ? AND deleted_at IS NULL`, req.user.id),
+      documentos_processando: await c(`SELECT COUNT(*) c FROM documents WHERE created_by = ? AND deleted_at IS NULL AND status IN ('pendente','processando')`, req.user.id),
+      lixeira: await c(`SELECT COUNT(*) c FROM records WHERE user_id = ? AND deleted_at IS NOT NULL`, req.user.id) + await c(`SELECT COUNT(*) c FROM documents WHERE created_by = ? AND deleted_at IS NOT NULL`, req.user.id)
     };
     res.json({ totals });
   } catch (err) { next(err); }
@@ -47,8 +47,8 @@ router.get('/stats', async (req, res, next) => {
 router.get('/history', async (req, res, next) => {
   try {
     const { record_id, document_id, limit = 100 } = req.query;
-    let sql = 'SELECT * FROM history WHERE 1=1';
-    const params = [];
+    let sql = 'SELECT * FROM history WHERE user_id = ?';
+    const params = [req.user.id];
     if (record_id) { sql += ' AND record_id = ?'; params.push(record_id); }
     if (document_id) { sql += ' AND document_id = ?'; params.push(document_id); }
     sql += ' ORDER BY id DESC LIMIT ?';
@@ -85,7 +85,7 @@ router.put('/settings', async (req, res, next) => {
 });
 
 /* --------------------------------- Export -------------------------------- */
-async function exportRows(filters) {
+async function exportRows(filters, userId) {
   let sql = `
     SELECT r.code AS "Código", r.name AS "Nome", r.description AS "Descrição", r.reference AS "Referência",
            r.quantity AS "Quantidade", r.quantity_text AS "Qtd. original", r.unit AS "Unidade", r.category AS "Categoria",
@@ -94,8 +94,8 @@ async function exportRows(filters) {
            r.page AS "Página", r.table_no AS "Tabela", r.row_no AS "Linha", r.col_no AS "Coluna",
            r.snippet AS "Trecho original", r.created_at AS "Importado em", r.checked_at AS "Conferido em"
     FROM records r LEFT JOIN documents d ON d.id = r.document_id
-    WHERE r.deleted_at IS NULL`;
-  const params = [];
+    WHERE r.deleted_at IS NULL AND r.user_id = ?`;
+  const params = [userId];
   if (filters.status) { sql += ' AND r.status = ?'; params.push(filters.status); }
   if (filters.document_id) { sql += ' AND r.document_id = ?'; params.push(filters.document_id); }
   return all(sql, ...params);
@@ -103,7 +103,7 @@ async function exportRows(filters) {
 
 router.get('/export/records', async (req, res, next) => {
   try {
-    const rows = await exportRows(req.query);
+    const rows = await exportRows(req.query, req.user.id);
     const format = req.query.format === 'csv' ? 'csv' : 'xlsx';
     const ws = XLSX.utils.json_to_sheet(rows.length ? rows : [{ Info: 'Nenhum registro' }]);
     const wb = XLSX.utils.book_new();
@@ -199,8 +199,8 @@ router.get('/trash', async (req, res, next) => {
   try {
     const records = await all(`
       SELECT r.*, d.original_name AS doc_name FROM records r LEFT JOIN documents d ON d.id = r.document_id
-      WHERE r.deleted_at IS NOT NULL ORDER BY r.deleted_at DESC LIMIT 500`);
-    const documents = await all(`SELECT * FROM documents WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC LIMIT 500`);
+      WHERE r.user_id = ? AND r.deleted_at IS NOT NULL ORDER BY r.deleted_at DESC LIMIT 500`, req.user.id);
+    const documents = await all(`SELECT * FROM documents WHERE created_by = ? AND deleted_at IS NOT NULL ORDER BY deleted_at DESC LIMIT 500`, req.user.id);
     res.json({ records, documents, retention_days: Number(await getSetting('trash_days', '30')) });
   } catch (err) { next(err); }
 });
@@ -209,7 +209,7 @@ router.post('/trash/purge', async (req, res, next) => {
   try {
     const days = Number(await getSetting('trash_days', '30'));
     const purgedFiles = await purgeOldTrash(days);
-    const docs = await all(`SELECT id, stored_name FROM documents WHERE deleted_at IS NOT NULL`);
+    const docs = await all(`SELECT id, stored_name FROM documents WHERE created_by = ? AND deleted_at IS NOT NULL`, req.user.id);
     let purgedDocs = 0, purgedRecords = 0;
     for (const d of docs) {
       await deleteOriginal(d.stored_name);
@@ -218,7 +218,7 @@ router.post('/trash/purge', async (req, res, next) => {
       await run('DELETE FROM documents WHERE id = ?', d.id);
       purgedDocs++;
     }
-    const rr = await run(`DELETE FROM records WHERE deleted_at IS NOT NULL`);
+    const rr = await run(`DELETE FROM records WHERE user_id = ? AND deleted_at IS NOT NULL`, req.user.id);
     purgedRecords += rr.changes;
     await logHistory({ action: 'lixeira_esvaziada', detail: `${purgedDocs} documento(s), ${purgedRecords} registro(s).`, user_id: req.user.id });
     res.json({ ok: true, purged_docs: purgedDocs, purged_records: purgedRecords, purged_files: purgedFiles });

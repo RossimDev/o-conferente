@@ -17,12 +17,12 @@ export function detectType(mime, name) {
 function insertStmts(records) {
   return records.map((r) => ({
     sql: `INSERT INTO records (
-      id, document_id, code, name, description, reference, quantity, quantity_text, unit, category, extra,
+      id, document_id, user_id, code, name, description, reference, quantity, quantity_text, unit, category, extra,
       page, table_no, row_no, col_no, pos_x, pos_y, pos_w, pos_h, page_width, page_height,
       snippet, confidence, needs_review, status
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendente')`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendente')`,
     args: [
-      crypto.randomUUID(), r.document_id, r.code, r.name, r.description, r.reference,
+      crypto.randomUUID(), r.document_id, r.user_id ?? null, r.code, r.name, r.description, r.reference,
       r.quantity, r.quantity_text, r.unit, r.category, r.extra ? JSON.stringify(r.extra) : null,
       r.page, r.table_no, r.row_no, r.col_no, r.pos_x, r.pos_y, r.pos_w, r.pos_h, r.page_width, r.page_height,
       r.snippet, r.confidence, r.needs_review ? 1 : 0
@@ -70,6 +70,7 @@ export async function processDocument(documentId) {
       allRecords.push(...linesToRecords(ocr.lines, { documentId, page: 1, source: 'ocr', pageWidth: ocr.width, pageHeight: ocr.height }));
     }
 
+    for (const r of allRecords) r.user_id = doc.created_by;
     await run('DELETE FROM records WHERE document_id = ?', documentId);
     for (let i = 0; i < allRecords.length; i += 50) {
       await batch(insertStmts(allRecords.slice(i, i + 50)));

@@ -31,9 +31,9 @@ export default function Home() {
         </form>
         <div className="hero-actions">
           <Link to="/import">＋ Importar documento</Link>
-          <Link to="/database">🗄 Banco de dados</Link>
-          <Link to="/conference">✓ Iniciar conferência</Link>
-          <Link to="/documents">📄 Gerenciar documentos</Link>
+          <Link to="/database">Banco de dados</Link>
+          <Link to="/conference">Iniciar conferência</Link>
+          <Link to="/documents">Gerenciar documentos</Link>
         </div>
       </section>
 
@@ -52,8 +52,8 @@ export default function Home() {
         <div className="progressbar mt"><div style={{ width: `${pct}%` }} /></div>
         {stats && stats.revisao_dados > 0 && (
           <p className="mt" style={{ color: 'var(--warn)', fontWeight: 600 }}>
-            ⚠ {stats.revisao_dados} registro(s) com baixa confiança aguardando revisão.{' '}
-            <Link to="/database?needs_review=1">Revisar agora →</Link>
+            {stats.revisao_dados} registro(s) com baixa confiança aguardando revisão.{' '}
+            <Link to="/database?needs_review=1">Revisar agora</Link>
           </p>
         )}
       </div>
@@ -68,7 +68,6 @@ export default function Home() {
                 <div className="title mono">{r.query}</div>
                 <div className="sub">{r.results} resultado(s)</div>
               </div>
-              <span className="muted">→</span>
             </div>
           ))}
         </div>
@@ -76,10 +75,10 @@ export default function Home() {
           <h2>Atalhos</h2>
           <div className="grid">
             <Link className="btn secondary" to="/import">＋ Importar PDF ou imagem</Link>
-            <Link className="btn secondary" to="/conference">✓ Conferência rápida</Link>
-            <Link className="btn secondary" to="/database?favorite=1">⭐ Favoritos</Link>
-            <Link className="btn secondary" to="/history">🕑 Histórico de alterações</Link>
-            <Link className="btn secondary" to="/trash">🗑 Lixeira</Link>
+            <Link className="btn secondary" to="/conference">Conferência rápida</Link>
+            <Link className="btn secondary" to="/database?favorite=1">Favoritos</Link>
+            <Link className="btn secondary" to="/history">Histórico de alterações</Link>
+            <Link className="btn secondary" to="/trash">Lixeira</Link>
           </div>
           {stats && (
             <p className="muted mt" style={{ fontSize: '.85rem' }}>

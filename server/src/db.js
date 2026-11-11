@@ -134,6 +134,7 @@ CREATE TABLE IF NOT EXISTS documents (
 CREATE TABLE IF NOT EXISTS records (
   id TEXT PRIMARY KEY,
   document_id INTEGER REFERENCES documents(id) ON DELETE SET NULL,
+  user_id INTEGER,
   code TEXT,
   name TEXT,
   description TEXT,
@@ -213,6 +214,7 @@ CREATE INDEX IF NOT EXISTS idx_records_doc ON records(document_id);
 CREATE INDEX IF NOT EXISTS idx_records_status ON records(status);
 CREATE INDEX IF NOT EXISTS idx_records_del ON records(deleted_at);
 CREATE INDEX IF NOT EXISTS idx_records_arch ON records(archived);
+CREATE INDEX IF NOT EXISTS idx_records_user ON records(user_id);
 CREATE INDEX IF NOT EXISTS idx_docs_del ON documents(deleted_at);
 CREATE INDEX IF NOT EXISTS idx_hist_record ON history(record_id);
 CREATE INDEX IF NOT EXISTS idx_hist_doc ON history(document_id);
@@ -248,6 +250,17 @@ async function initSchema() {
   } catch (err) {
     console.warn('FTS5 indisponível — busca usará fallback LIKE:', err.message);
   }
+  // Migração: dados por conta (records.user_id) — bancos antigos ganham a coluna
+  // e os dados existentes são atribuídos ao dono do documento (ou ao 1º usuário).
+  try { await d.run(`ALTER TABLE records ADD COLUMN user_id INTEGER`, []); } catch { /* coluna já existe */ }
+  try {
+    await d.run(`UPDATE records SET user_id = (SELECT created_by FROM documents WHERE documents.id = records.document_id) WHERE user_id IS NULL AND document_id IS NOT NULL`, []);
+    await d.run(`UPDATE records SET user_id = (SELECT id FROM users ORDER BY id LIMIT 1) WHERE user_id IS NULL`, []);
+    await d.run(`UPDATE documents SET created_by = (SELECT id FROM users ORDER BY id LIMIT 1) WHERE created_by IS NULL`, []);
+    await d.run(`UPDATE conference_sessions SET created_by = (SELECT id FROM users ORDER BY id LIMIT 1) WHERE created_by IS NULL`, []);
+    await d.run(`CREATE INDEX IF NOT EXISTS idx_records_user ON records(user_id)`, []);
+  } catch { /* melhor esforço */ }
+
   const defaults = { trash_days: '30', app_title: 'O Conferente', review_low_confidence: '0.75' };
   for (const [k, v] of Object.entries(defaults)) {
     await d.run('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)', [k, v]);

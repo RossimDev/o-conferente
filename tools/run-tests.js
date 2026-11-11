@@ -386,6 +386,29 @@ try {
   report('Complementar: conta restaurada em ambiente novo (sem cadastro)', true,
     'restore sem login em banco vazio + acesso com a mesma senha + dados recuperados');
 
+  /* ---------- Complementar: contas independentes (isolamento por conta) ---------- */
+  const reg = await fetch(BASE + '/auth/register', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: 'maria', password: 'maria123', name: 'Maria' })
+  });
+  const regj = await reg.json();
+  assert(regj.token, 'registro público de nova conta falhou: ' + (regj.error || ''));
+  const h2 = { Authorization: 'Bearer ' + regj.token };
+  const docs2 = await (await fetch(BASE + '/documents', { headers: h2 })).json();
+  const rec2 = await (await fetch(BASE + '/records', { headers: h2 })).json();
+  const st2 = await (await fetch(BASE + '/stats', { headers: h2 })).json();
+  assert((docs2.documents || []).length === 0, 'conta nova vê documentos de outra conta');
+  assert((rec2.records || []).length === 0, 'conta nova vê registros de outra conta');
+  assert(Number(st2.totals.registros) === 0, 'estatísticas vazando entre contas');
+  const srch2 = await (await fetch(BASE + '/search?q=20001', { headers: h2 })).json();
+  assert((srch2.exact || []).length === 0, 'pesquisa vazando entre contas');
+  const steal = await fetch(BASE + '/records/' + r20001.id, { headers: h2 });
+  assert(steal.status === 404, `acesso direto a registro alheio permitido (${steal.status})`);
+  const mine = await req('GET', '/search', { query: { q: '20001' } });
+  assert((mine.exact || []).length >= 1, 'a conta principal perdeu os próprios dados');
+  report('Complementar: contas independentes (cada conta vê apenas o seu)', true,
+    'criação pública de conta + isolamento de documentos, registros, busca e estatísticas');
+
 } catch (err) {
   report('Execução interrompida', false, err.message);
   console.error(err);

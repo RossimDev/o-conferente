@@ -96,8 +96,8 @@ export default function SettingsPage() {
           <button className="btn" onClick={saveSettings}>Salvar preferências</button>
           <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '18px 0' }} />
           <div className="btn-row">
-            <Link className="btn secondary" to="/trash">🗑 Gerenciar lixeira</Link>
-            <Link className="btn secondary" to="/history">🕑 Histórico</Link>
+            <Link className="btn secondary" to="/trash">Gerenciar lixeira</Link>
+            <Link className="btn secondary" to="/history">Histórico</Link>
           </div>
         </div>
       </div>
@@ -107,10 +107,10 @@ export default function SettingsPage() {
           <h2>Exportação e backup</h2>
           <p className="muted">Backup completo inclui o banco de dados e todos os documentos originais.</p>
           <div className="btn-row">
-            <a className="btn" href={downloadUrl('/backup/download')}>⬇ Baixar backup completo (.zip)</a>
+            <a className="btn" href={downloadUrl('/backup/download')}>Baixar backup completo (.zip)</a>
             <a className="btn secondary" href={downloadUrl('/export/records', { format: 'xlsx' })}>Exportar Excel</a>
             <a className="btn secondary" href={downloadUrl('/export/records', { format: 'csv' })}>Exportar CSV</a>
-            <button className="btn secondary" onClick={() => restoreRef.current?.click()}>⬆ Restaurar backup</button>
+            <button className="btn secondary" onClick={() => restoreRef.current?.click()}>Restaurar backup</button>
             <input ref={restoreRef} type="file" accept=".zip" hidden onChange={(e) => restoreBackup(e.target.files[0])} />
           </div>
           <p className="muted mt" style={{ fontSize: '.83rem' }}>
@@ -153,7 +153,7 @@ export default function SettingsPage() {
       <div className="card">
         <h2>Serviços externos</h2>
         <p>
-          ✅ Nenhum serviço pago ou API Key é necessário. Todo o processamento (OCR, extração de PDF, banco de dados)
+          Nenhum serviço pago ou API Key é necessário. Todo o processamento (OCR, extração de PDF, banco de dados)
           funciona localmente no servidor, com tecnologias livres: Tesseract, PDF.js e SQLite.
         </p>
       </div>

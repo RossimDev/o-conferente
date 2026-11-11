@@ -193,6 +193,7 @@ Nenhuma informação é inventada: campos não identificados no documento perman
 ## 10. Publicação na Vercel (nuvem)
 
 - **URL de produção:** `https://o-conferente-rossimdevs-projects.vercel.app` (projeto `o-conferente`)
+- **Contas independentes:** a tela de entrada permite **Entrar** em uma conta existente ou **Criar nova conta**. Cada conta mantém seus próprios documentos, registros, conferências e histórico. A primeira conta criada em um ambiente novo torna-se administradora.
 - **Publicação automática:** cada `git push` na branch `main` do repositório dispara o build e atualiza o site.
 - **Banco de dados:** o app roda com seu banco SQLite próprio, sem serviços externos. Na nuvem, os dados permanecem ativos durante o uso; além disso, **uma cópia da conta e de tudo o que é feito é salva automaticamente neste dispositivo** — na próxima visita, o app restaura a conta e os dados sozinho e você apenas entra com sua senha (sem criar conta de novo).
 - **Backup extra:** use **Ajustes → Backup** para baixar um `.zip` com dados + originais (guarde em local seguro ou transfira para outro dispositivo via **Restaurar**).

@@ -12,11 +12,11 @@ export function ResultCard({ r, exact, onStatusChange }) {
             ? <span className="code-chip">{r.code}</span>
             : <span className="badge gray">sem código</span>}
           <span className="name">{r.name || r.description || '(sem descrição)'}</span>
-          {r.needs_review ? <span className="badge revisar" title="Baixa confiança — revise">⚠ revisar dados</span> : null}
+          {r.needs_review ? <span className="badge revisar" title="Baixa confiança — revise">Revisar dados</span> : null}
         </div>
         {r.description && r.name && <div className="desc">{r.description}</div>}
         <div className="meta">
-          <span className="origin">📄 {r.document ? `${r.document.original_name} (import. nº ${r.document.seq})` : 'Documento indisponível'}</span>
+          <span className="origin">{r.document ? `${r.document.original_name} (import. nº ${r.document.seq})` : 'Documento indisponível'}</span>
           {r.page != null && <span className="origin">Página {r.page}</span>}
           {r.table_no != null && <span className="origin">Tabela {r.table_no}</span>}
           {r.row_no != null && <span className="origin">Linha {r.row_no}</span>}
@@ -58,7 +58,7 @@ export default function SearchPage() {
   useEffect(() => { setQ(q0); run(q0); }, [q0, run]);
 
   const groups = data ? [
-    { key: 'exact', title: '✓ Resultado exato', items: data.exact, cls: 'exact' },
+    { key: 'exact', title: 'Resultado exato', items: data.exact, cls: 'exact' },
     { key: 'prefix', title: `Códigos iniciados por "${data.query}"`, items: data.prefix },
     { key: 'code_partial', title: 'Outras correspondências de código', items: data.code_partial },
     { key: 'similar', title: 'Códigos semelhantes (confira se não é o que procura)', items: data.similar },

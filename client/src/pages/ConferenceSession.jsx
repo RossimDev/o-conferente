@@ -4,15 +4,15 @@ import { api, fmtQty, queueOfflineOp } from '../api.js';
 import { useApp } from '../App.jsx';
 
 const STATUS_ACTIONS = [
-  { v: 'conferido', label: '✓ Conferido', cls: 'success' },
-  { v: 'divergente', label: '⚠ Divergente', cls: 'danger' },
-  { v: 'revisar', label: '🔍 Revisar', cls: 'warn' },
-  { v: 'pendente', label: '↩ Desmarcar', cls: 'secondary' }
+  { v: 'conferido', label: 'Conferido', cls: 'success' },
+  { v: 'divergente', label: 'Divergente', cls: 'danger' },
+  { v: 'revisar', label: 'Revisar', cls: 'warn' },
+  { v: 'pendente', label: 'Desmarcar', cls: 'secondary' }
 ];
 
 /**
  * Sessão de conferência com fluxo CONTÍNUO:
- * pesquise um código → veja o item → marque → avance para o próximo.
+ * pesquise um código, veja o item, marque o status e avance para o próximo.
  */
 export default function ConferenceSession() {
   const { id } = useParams();
@@ -84,7 +84,7 @@ export default function ConferenceSession() {
     <div>
       <div className="page-head">
         <div>
-          <button className="link-btn" onClick={() => nav('/conference')}>← Sessões</button>
+          <button className="link-btn" onClick={() => nav('/conference')}>Voltar às sessões</button>
           <h1>{session.name}</h1>
           <p className="sub">{session.type || ''} · {done}/{total} conferidos · {pct}% concluído</p>
         </div>

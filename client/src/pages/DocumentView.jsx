@@ -68,7 +68,7 @@ export default function DocumentView() {
     <div>
       <div className="page-head">
         <div>
-          <button className="link-btn" onClick={() => nav('/documents')}>← Documentos</button>
+          <button className="link-btn" onClick={() => nav('/documents')}>Documentos</button>
           <h1>{doc.original_name}</h1>
           <p className="sub">
             Importação nº {doc.seq} · {doc.type === 'pdf' ? 'PDF' : 'Imagem'} · {fmtDate(doc.created_at)} ·{' '}
@@ -92,9 +92,9 @@ export default function DocumentView() {
           <div>
             <div className="flex between mb">
               <div className="btn-row">
-                <button className="btn sm secondary" disabled={page <= 1} onClick={() => goPage(page - 1)}>← Página</button>
+                <button className="btn sm secondary" disabled={page <= 1} onClick={() => goPage(page - 1)}>Página anterior</button>
                 <span style={{ fontWeight: 700 }}>Página {page}{doc.page_count ? ` de ${doc.page_count}` : ''}</span>
-                <button className="btn sm secondary" disabled={doc.page_count && page >= doc.page_count} onClick={() => goPage(page + 1)}>Página →</button>
+                <button className="btn sm secondary" disabled={doc.page_count && page >= doc.page_count} onClick={() => goPage(page + 1)}>Próxima página</button>
               </div>
               {rec && (
                 <span className="badge neutral">

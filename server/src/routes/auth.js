@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { one, all, run, logHistory } from '../db.js';
-import { hashPassword, verifyPassword, createToken, revokeToken, requireAuth, userCount } from '../auth.js';
+import { hashPassword, verifyPassword, createToken, revokeToken, requireAuth, userCount, getUserByToken } from '../auth.js';
 
 const router = Router();
 
@@ -18,16 +18,34 @@ router.post('/setup', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.post('/register', requireAuth, async (req, res, next) => {
+/** Criação de conta aberta (tela de entrada) ou por administrador (Ajustes). */
+router.post('/register', async (req, res, next) => {
   try {
     const { username, password, name, role } = req.body || {};
     if (!username || !password) return res.status(400).json({ error: 'Informe usuário e senha.' });
     if (String(password).length < 6) return res.status(400).json({ error: 'A senha deve ter pelo menos 6 caracteres.' });
+    if (!/^[\w.\-@]{3,32}$/.test(String(username).trim())) {
+      return res.status(400).json({ error: 'Usuário: 3 a 32 caracteres (letras, números, ponto, hífen ou @).' });
+    }
+    // Papel "admin" só quando quem está cadastrando é um administrador autenticado
+    // (ou para a primeira conta do sistema).
+    let wantRole = (await userCount()) === 0 ? 'admin' : 'user';
+    const header = req.headers.authorization || '';
+    if (role === 'admin' && header.startsWith('Bearer ')) {
+      const actor = await getUserByToken(header.slice(7));
+      if (actor && actor.role === 'admin') wantRole = 'admin';
+    }
     try {
       const info = await run('INSERT INTO users (username, password_hash, name, role) VALUES (?, ?, ?, ?)',
-        String(username).trim(), hashPassword(password), name || String(username).trim(), role === 'admin' ? 'admin' : 'user');
-      await logHistory({ action: 'usuario_criado', detail: `Usuário "${username}" criado.`, user_id: req.user.id });
-      res.json({ id: info.lastRowid, username });
+        String(username).trim(), hashPassword(password), name || String(username).trim(), wantRole);
+      const token = await createToken(info.lastRowid);
+      await logHistory({ action: 'usuario_criado', detail: `Usuário "${username}" criado.`, user_id: info.lastRowid });
+      res.json({
+        id: info.lastRowid,
+        token: token.token,
+        expires_at: token.expires_at,
+        user: { id: info.lastRowid, username: String(username).trim(), name: name || String(username).trim(), role: wantRole }
+      });
     } catch {
       res.status(400).json({ error: 'Nome de usuário já existe.' });
     }

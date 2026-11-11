@@ -75,8 +75,8 @@ export default function DatabasePage() {
               {docs.map((d) => <option key={d.id} value={d.id}>{d.seq} — {d.original_name}</option>)}
             </select>
           </label>
-          <button className={`pill-btn ${favorite === '1' ? 'active' : ''}`} onClick={() => setFilter('favorite', favorite === '1' ? '' : '1')}>⭐ Favoritos</button>
-          <button className={`pill-btn ${needs_review === '1' ? 'active' : ''}`} onClick={() => setFilter('needs_review', needs_review === '1' ? '' : '1')}>⚠ Revisar</button>
+          <button className={`pill-btn ${favorite === '1' ? 'active' : ''}`} onClick={() => setFilter('favorite', favorite === '1' ? '' : '1')}>Favoritos</button>
+          <button className={`pill-btn ${needs_review === '1' ? 'active' : ''}`} onClick={() => setFilter('needs_review', needs_review === '1' ? '' : '1')}>Revisar</button>
           <button className="pill-btn" onClick={() => setParams({})}>Limpar</button>
         </div>
       </div>
@@ -116,8 +116,8 @@ export default function DatabasePage() {
                   <td><span className={`badge ${r.status}`}>{STATUS_LABEL[r.status] || r.status}</span></td>
                   <td onClick={(e) => e.stopPropagation()}>
                     <div className="btn-row">
-                      <button className="btn sm secondary" title="Favoritar" onClick={() => act(() => api(`/records/${r.id}/favorite`, { method: 'POST' }), 'Favoritos atualizados')}>{r.favorite ? '⭐' : '☆'}</button>
-                      <button className="btn sm secondary" title="Marcar conferido" onClick={() => act(() => api(`/records/${r.id}/status`, { method: 'POST', body: { status: 'conferido' } }), 'Conferido!')}>✓</button>
+                      <button className="btn sm secondary" title="Favoritar" onClick={() => act(() => api(`/records/${r.id}/favorite`, { method: 'POST' }), 'Favoritos atualizados')}>{r.favorite ? 'Remover favorito' : 'Favoritar'}</button>
+                      <button className="btn sm secondary" title="Marcar conferido" onClick={() => act(() => api(`/records/${r.id}/status`, { method: 'POST', body: { status: 'conferido' } }), 'Registro marcado como conferido')}>Conferir</button>
                     </div>
                   </td>
                 </tr>
@@ -148,9 +148,9 @@ export default function DatabasePage() {
 
       {data.pages > 1 && (
         <div className="flex" style={{ justifyContent: 'center', marginTop: 18 }}>
-          <button className="btn sm secondary" disabled={page <= 1} onClick={() => setFilter('page', String(page - 1))}>← Anterior</button>
+          <button className="btn sm secondary" disabled={page <= 1} onClick={() => setFilter('page', String(page - 1))}>Anterior</button>
           <span className="muted">Página {page} de {data.pages}</span>
-          <button className="btn sm secondary" disabled={page >= data.pages} onClick={() => setFilter('page', String(page + 1))}>Próxima →</button>
+          <button className="btn sm secondary" disabled={page >= data.pages} onClick={() => setFilter('page', String(page + 1))}>Próxima</button>
         </div>
       )}
     </div>

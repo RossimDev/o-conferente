@@ -100,7 +100,7 @@ export default function ImportPage() {
             Selecionar arquivos
           </button>
           <button type="button" className="btn secondary" onClick={(e) => { e.stopPropagation(); camRef.current?.click(); }}>
-            📷 Fotografar documento
+            Fotografar documento
           </button>
         </div>
         <input ref={fileRef} type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.gif,.bmp,.webp,.tif,.tiff,.heic,.avif,application/pdf,image/*" hidden onChange={(e) => upload(e.target.files)} />
@@ -111,7 +111,7 @@ export default function ImportPage() {
 
       <div className="section-title">
         <h2>Documentos recentes</h2>
-        <Link className="btn sm secondary" to="/documents">Gerenciar todos →</Link>
+        <Link className="btn sm secondary" to="/documents">Gerenciar todos</Link>
       </div>
 
       {docs.filter((d) => !d.deleted_at).slice(0, 8).map((d) => (
@@ -125,7 +125,7 @@ export default function ImportPage() {
           <StatusBadge status={d.status} low={d.low_confidence_count} />
           {d.status === 'pronto' || d.status === 'revisao' ? (
             <Link className="btn sm" to={`/import/${d.id}/review`}>
-              {d.status === 'revisao' ? '⚠ Revisar dados' : 'Ver dados'}
+              {d.status === 'revisao' ? 'Revisar dados' : 'Ver dados'}
             </Link>
           ) : d.status === 'erro' ? (
             <button className="btn sm warn" onClick={() => api(`/documents/${d.id}/reprocess`, { method: 'POST' }).then(load)}>Reprocessar</button>

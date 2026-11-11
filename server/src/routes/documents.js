@@ -92,7 +92,7 @@ router.post('/upload', upload.array('files', 20), async (req, res, next) => {
 /** Processamento explícito (modo cloud): roda dentro da requisição. */
 router.post('/:id/process', async (req, res, next) => {
   try {
-    const row = await one('SELECT * FROM documents WHERE id = ?', req.params.id);
+    const row = await one('SELECT * FROM documents WHERE id = ? AND created_by = ?', req.params.id, req.user.id);
     if (!row) return res.status(404).json({ error: 'Documento não encontrado.' });
     if (isCloud() || process.env.VERCEL) {
       await processDocument(row.id);
@@ -116,8 +116,8 @@ async function docRow(row) {
 router.get('/', async (req, res, next) => {
   try {
     const { include_deleted, q } = req.query;
-    let sql = 'SELECT * FROM documents WHERE 1=1';
-    const params = [];
+    let sql = 'SELECT * FROM documents WHERE created_by = ?';
+    const params = [req.user.id];
     if (include_deleted !== '1') sql += ' AND deleted_at IS NULL';
     sql += ' AND archived = 0';
     if (q) { sql += ' AND (original_name LIKE ? COLLATE NOCASE)'; params.push(`%${q}%`); }
@@ -131,7 +131,7 @@ router.get('/', async (req, res, next) => {
 
 router.get('/:id', async (req, res, next) => {
   try {
-    const row = await one('SELECT * FROM documents WHERE id = ?', req.params.id);
+    const row = await one('SELECT * FROM documents WHERE id = ? AND created_by = ?', req.params.id, req.user.id);
     if (!row) return res.status(404).json({ error: 'Documento não encontrado.' });
     const rec = await one('SELECT COUNT(*) c FROM records WHERE document_id = ? AND deleted_at IS NULL', row.id);
     res.json({ document: { ...(await docRow(row)), records: rec ? Number(rec.c) : 0 } });
@@ -141,7 +141,7 @@ router.get('/:id', async (req, res, next) => {
 /** Arquivo original preservado (com suporte a Range para visualizadores de PDF). */
 router.get('/:id/file', async (req, res, next) => {
   try {
-    const row = await one('SELECT * FROM documents WHERE id = ?', req.params.id);
+    const row = await one('SELECT * FROM documents WHERE id = ? AND created_by = ?', req.params.id, req.user.id);
     if (!row || !(await fileExists(row.stored_name))) return res.status(404).json({ error: 'Arquivo não disponível.' });
     const buffer = await readDocBuffer(row.stored_name);
     res.setHeader('Content-Type', row.mime_type);
@@ -169,6 +169,8 @@ router.get('/:id/file', async (req, res, next) => {
 
 router.get('/:id/pages/:page/render', async (req, res, next) => {
   try {
+    const own = await one('SELECT id FROM documents WHERE id = ? AND created_by = ?', req.params.id, req.user.id);
+    if (!own) return res.status(404).json({ error: 'Documento não encontrado.' });
     const scale = Math.min(3, Math.max(1, Number(req.query.scale || 2)));
     const png = await renderPageHighlight(Number(req.params.id), Number(req.params.page), req.query.record ? String(req.query.record) : null, scale);
     if (!png) return res.status(404).json({ error: 'Página não disponível.' });
@@ -182,15 +184,15 @@ router.get('/:id/records', async (req, res, next) => {
   try {
     const rows = await all(`
       SELECT * FROM records
-      WHERE document_id = ? AND deleted_at IS NULL
-      ORDER BY page, table_no, row_no, id`, req.params.id);
+      WHERE document_id = ? AND user_id = ? AND deleted_at IS NULL
+      ORDER BY page, table_no, row_no, id`, req.params.id, req.user.id);
     res.json({ records: rows });
   } catch (err) { next(err); }
 });
 
 router.post('/:id/reprocess', async (req, res, next) => {
   try {
-    const row = await one('SELECT * FROM documents WHERE id = ?', req.params.id);
+    const row = await one('SELECT * FROM documents WHERE id = ? AND created_by = ?', req.params.id, req.user.id);
     if (!row) return res.status(404).json({ error: 'Documento não encontrado.' });
     await run(`UPDATE documents SET status = 'pendente', error = NULL WHERE id = ?`, row.id);
     if (isCloud() || process.env.VERCEL) {
@@ -204,7 +206,7 @@ router.post('/:id/reprocess', async (req, res, next) => {
 
 router.put('/:id', async (req, res, next) => {
   try {
-    const row = await one('SELECT * FROM documents WHERE id = ?', req.params.id);
+    const row = await one('SELECT * FROM documents WHERE id = ? AND created_by = ?', req.params.id, req.user.id);
     if (!row) return res.status(404).json({ error: 'Documento não encontrado.' });
     const { original_name, archived } = req.body || {};
     const newName = original_name ? safeFileName(original_name) : row.original_name;
@@ -223,7 +225,7 @@ router.put('/:id', async (req, res, next) => {
 
 router.post('/:id/archive', async (req, res, next) => {
   try {
-    await run('UPDATE documents SET archived = 1 WHERE id = ?', req.params.id);
+    await run('UPDATE documents SET archived = 1 WHERE id = ? AND created_by = ?', req.params.id, req.user.id);
     await logHistory({ document_id: Number(req.params.id), action: 'documento_arquivado', user_id: req.user.id });
     res.json({ ok: true });
   } catch (err) { next(err); }
@@ -231,7 +233,7 @@ router.post('/:id/archive', async (req, res, next) => {
 
 router.post('/:id/restore-archive', async (req, res, next) => {
   try {
-    await run('UPDATE documents SET archived = 0 WHERE id = ?', req.params.id);
+    await run('UPDATE documents SET archived = 0 WHERE id = ? AND created_by = ?', req.params.id, req.user.id);
     await logHistory({ document_id: Number(req.params.id), action: 'documento_restaurado', user_id: req.user.id });
     res.json({ ok: true });
   } catch (err) { next(err); }
@@ -239,7 +241,7 @@ router.post('/:id/restore-archive', async (req, res, next) => {
 
 router.delete('/:id', async (req, res, next) => {
   try {
-    const row = await one('SELECT * FROM documents WHERE id = ?', req.params.id);
+    const row = await one('SELECT * FROM documents WHERE id = ? AND created_by = ?', req.params.id, req.user.id);
     if (!row) return res.status(404).json({ error: 'Documento não encontrado.' });
     const mode = req.query.mode === 'keep_records' ? 'keep_records' : 'with_records';
     const permanent = req.query.permanent === '1';
@@ -271,7 +273,7 @@ router.delete('/:id', async (req, res, next) => {
 
 router.post('/:id/restore', async (req, res, next) => {
   try {
-    const row = await one('SELECT * FROM documents WHERE id = ?', req.params.id);
+    const row = await one('SELECT * FROM documents WHERE id = ? AND created_by = ?', req.params.id, req.user.id);
     if (!row) return res.status(404).json({ error: 'Documento não encontrado.' });
     await restoreFromTrash(row.stored_name);
     await run(`UPDATE documents SET deleted_at = NULL, file_available = 1 WHERE id = ?`, row.id);

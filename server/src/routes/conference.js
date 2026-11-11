@@ -14,7 +14,7 @@ router.get('/sessions', async (req, res, next) => {
         (SELECT COUNT(*) FROM conference_items ci WHERE ci.session_id = s.id AND ci.status = 'divergente') AS divergentes,
         (SELECT COUNT(*) FROM conference_items ci WHERE ci.session_id = s.id AND ci.status = 'revisar') AS revisar,
         (SELECT COUNT(*) FROM conference_items ci WHERE ci.session_id = s.id AND ci.status = 'pendente') AS pendentes
-      FROM conference_sessions s ORDER BY s.id DESC`);
+      FROM conference_sessions s WHERE s.created_by = ? ORDER BY s.id DESC`, req.user.id);
     res.json({ sessions: rows });
   } catch (err) { next(err); }
 });
@@ -32,7 +32,7 @@ router.post('/sessions', async (req, res, next) => {
 
 router.get('/sessions/:id', async (req, res, next) => {
   try {
-    const s = await one('SELECT * FROM conference_sessions WHERE id = ?', req.params.id);
+    const s = await one('SELECT * FROM conference_sessions WHERE id = ? AND created_by = ?', req.params.id, req.user.id);
     if (!s) return res.status(404).json({ error: 'Sessão não encontrada.' });
     const items = await all(`
       SELECT ci.*, r.code, r.name, r.description, r.quantity, r.quantity_text, r.unit, r.page, r.table_no, r.row_no, r.col_no,
@@ -48,7 +48,7 @@ router.get('/sessions/:id', async (req, res, next) => {
 
 router.put('/sessions/:id', async (req, res, next) => {
   try {
-    const s = await one('SELECT * FROM conference_sessions WHERE id = ?', req.params.id);
+    const s = await one('SELECT * FROM conference_sessions WHERE id = ? AND created_by = ?', req.params.id, req.user.id);
     if (!s) return res.status(404).json({ error: 'Sessão não encontrada.' });
     const { name, type, notes, status } = req.body || {};
     await run('UPDATE conference_sessions SET name = ?, type = ?, notes = ?, status = ? WHERE id = ?',
@@ -62,7 +62,7 @@ router.put('/sessions/:id', async (req, res, next) => {
 
 router.delete('/sessions/:id', async (req, res, next) => {
   try {
-    await run('DELETE FROM conference_sessions WHERE id = ?', req.params.id);
+    await run('DELETE FROM conference_sessions WHERE id = ? AND created_by = ?', req.params.id, req.user.id);
     await logHistory({ action: 'sessao_excluida', detail: `Sessão #${req.params.id} excluída.`, user_id: req.user.id });
     res.json({ ok: true });
   } catch (err) { next(err); }
@@ -71,7 +71,9 @@ router.delete('/sessions/:id', async (req, res, next) => {
 router.post('/sessions/:id/items', async (req, res, next) => {
   try {
     const { record_id, status } = req.body || {};
-    const rec = await one('SELECT * FROM records WHERE id = ? AND deleted_at IS NULL', record_id);
+    const sess = await one('SELECT id FROM conference_sessions WHERE id = ? AND created_by = ?', req.params.id, req.user.id);
+    if (!sess) return res.status(404).json({ error: 'Sessão não encontrada.' });
+    const rec = await one('SELECT * FROM records WHERE id = ? AND user_id = ? AND deleted_at IS NULL', record_id, req.user.id);
     if (!rec) return res.status(404).json({ error: 'Registro não encontrado.' });
     const st = ['pendente', 'conferido', 'divergente', 'revisar'].includes(status) ? status : 'pendente';
     await run(`
@@ -85,7 +87,7 @@ router.post('/sessions/:id/items', async (req, res, next) => {
 
 router.post('/items/:itemId/status', async (req, res, next) => {
   try {
-    const item = await one('SELECT * FROM conference_items WHERE id = ?', req.params.itemId);
+    const item = await one('SELECT ci.* FROM conference_items ci JOIN conference_sessions s ON s.id = ci.session_id WHERE ci.id = ? AND s.created_by = ?', req.params.itemId, req.user.id);
     if (!item) return res.status(404).json({ error: 'Item não encontrado.' });
     const status = ['pendente', 'conferido', 'divergente', 'revisar'].includes(req.body.status) ? req.body.status : 'pendente';
     const checkedAt = status === 'conferido' ? new Date().toISOString() : null;
@@ -105,7 +107,7 @@ router.post('/items/:itemId/status', async (req, res, next) => {
 router.post('/quick', async (req, res, next) => {
   try {
     const { record_id, status, session_id } = req.body || {};
-    const rec = await one('SELECT * FROM records WHERE id = ? AND deleted_at IS NULL', record_id);
+    const rec = await one('SELECT * FROM records WHERE id = ? AND user_id = ? AND deleted_at IS NULL', record_id, req.user.id);
     if (!rec) return res.status(404).json({ error: 'Registro não encontrado.' });
     const st = ['pendente', 'conferido', 'divergente', 'revisar'].includes(status) ? status : 'pendente';
     const checkedAt = st === 'conferido' ? new Date().toISOString() : null;
@@ -124,7 +126,7 @@ router.post('/quick', async (req, res, next) => {
 
 router.delete('/items/:itemId', async (req, res, next) => {
   try {
-    await run('DELETE FROM conference_items WHERE id = ?', req.params.itemId);
+    await run('DELETE FROM conference_items WHERE id = ? AND session_id IN (SELECT id FROM conference_sessions WHERE created_by = ?)', req.params.itemId, req.user.id);
     res.json({ ok: true });
   } catch (err) { next(err); }
 });

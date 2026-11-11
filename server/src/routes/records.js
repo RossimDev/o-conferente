@@ -25,9 +25,9 @@ function withDoc(row) {
 router.get('/', async (req, res, next) => {
   try {
     const { q, status, document_id, category, favorite, needs_review, include_deleted, archived, page = 1, limit = 50, sort = 'recent' } = req.query;
-    let sql = `${RECORD_SELECT} WHERE r.deleted_at IS NULL`;
-    const params = [];
-    if (include_deleted === '1') sql = `${RECORD_SELECT} WHERE 1=1`;
+    let sql = `${RECORD_SELECT} WHERE r.user_id = ? AND r.deleted_at IS NULL`;
+    const params = [req.user.id];
+    if (include_deleted === '1') sql = `${RECORD_SELECT} WHERE r.user_id = ?`;
     if (archived !== '1') sql += ' AND r.archived = 0';
     if (status) { sql += ' AND r.status = ?'; params.push(status); }
     if (document_id) { sql += ' AND r.document_id = ?'; params.push(document_id); }
@@ -52,17 +52,17 @@ router.get('/', async (req, res, next) => {
 
 router.get('/trash/all', async (req, res, next) => {
   try {
-    const rows = await all(`${RECORD_SELECT} WHERE r.deleted_at IS NOT NULL ORDER BY r.deleted_at DESC LIMIT 500`);
+    const rows = await all(`${RECORD_SELECT} WHERE r.user_id = ? AND r.deleted_at IS NOT NULL ORDER BY r.deleted_at DESC LIMIT 500`, req.user.id);
     res.json({ records: rows.map(withDoc) });
   } catch (err) { next(err); }
 });
 
 router.get('/:id', async (req, res, next) => {
   try {
-    const row = await one(`${RECORD_SELECT} WHERE r.id = ?`, req.params.id);
+    const row = await one(`${RECORD_SELECT} WHERE r.id = ? AND r.user_id = ?`, req.params.id, req.user.id);
     if (!row) return res.status(404).json({ error: 'Registro não encontrado.' });
     const occurrences = row.code
-      ? (await all(`${RECORD_SELECT} WHERE r.code = ? COLLATE NOCASE AND r.deleted_at IS NULL ORDER BY d.seq`, row.code)).map(withDoc)
+      ? (await all(`${RECORD_SELECT} WHERE r.code = ? COLLATE NOCASE AND r.user_id = ? AND r.deleted_at IS NULL ORDER BY d.seq`, row.code, req.user.id)).map(withDoc)
       : [];
     const history = await all('SELECT * FROM history WHERE record_id = ? ORDER BY id DESC LIMIT 100', req.params.id);
     res.json({
@@ -89,7 +89,7 @@ const EDITABLE = ['code', 'name', 'description', 'reference', 'quantity', 'quant
 
 router.put('/:id', async (req, res, next) => {
   try {
-    const row = await one('SELECT * FROM records WHERE id = ?', req.params.id);
+    const row = await one('SELECT * FROM records WHERE id = ? AND user_id = ?', req.params.id, req.user.id);
     if (!row) return res.status(404).json({ error: 'Registro não encontrado.' });
     const upd = { ...row };
     for (const f of EDITABLE) {
@@ -117,7 +117,7 @@ router.put('/:id', async (req, res, next) => {
 
 router.delete('/:id', async (req, res, next) => {
   try {
-    const row = await one('SELECT * FROM records WHERE id = ?', req.params.id);
+    const row = await one('SELECT * FROM records WHERE id = ? AND user_id = ?', req.params.id, req.user.id);
     if (!row) return res.status(404).json({ error: 'Registro não encontrado.' });
     if (req.query.permanent === '1') {
       await run('DELETE FROM records WHERE id = ?', row.id);
@@ -132,7 +132,7 @@ router.delete('/:id', async (req, res, next) => {
 
 router.post('/:id/restore', async (req, res, next) => {
   try {
-    const row = await one('SELECT * FROM records WHERE id = ?', req.params.id);
+    const row = await one('SELECT * FROM records WHERE id = ? AND user_id = ?', req.params.id, req.user.id);
     if (!row) return res.status(404).json({ error: 'Registro não encontrado.' });
     await run(`UPDATE records SET deleted_at = NULL, updated_at = datetime('now') WHERE id = ?`, row.id);
     await logHistory({ record_id: row.id, action: 'registro_restaurado', user_id: req.user.id });
@@ -142,7 +142,7 @@ router.post('/:id/restore', async (req, res, next) => {
 
 router.post('/:id/archive', async (req, res, next) => {
   try {
-    const row = await one('SELECT * FROM records WHERE id = ?', req.params.id);
+    const row = await one('SELECT * FROM records WHERE id = ? AND user_id = ?', req.params.id, req.user.id);
     if (!row) return res.status(404).json({ error: 'Registro não encontrado.' });
     await run(`UPDATE records SET archived = 1, updated_at = datetime('now') WHERE id = ?`, row.id);
     await logHistory({ record_id: row.id, action: 'registro_arquivado', user_id: req.user.id });
@@ -152,7 +152,9 @@ router.post('/:id/archive', async (req, res, next) => {
 
 router.post('/:id/unarchive', async (req, res, next) => {
   try {
-    await run(`UPDATE records SET archived = 0, updated_at = datetime('now') WHERE id = ?`, req.params.id);
+    const row = await one('SELECT * FROM records WHERE id = ? AND user_id = ?', req.params.id, req.user.id);
+    if (!row) return res.status(404).json({ error: 'Registro não encontrado.' });
+    await run(`UPDATE records SET archived = 0, updated_at = datetime('now') WHERE id = ?`, row.id);
     await logHistory({ record_id: req.params.id, action: 'registro_restaurado_arquivo', user_id: req.user.id });
     res.json({ ok: true });
   } catch (err) { next(err); }
@@ -160,7 +162,7 @@ router.post('/:id/unarchive', async (req, res, next) => {
 
 router.post('/:id/favorite', async (req, res, next) => {
   try {
-    const row = await one('SELECT * FROM records WHERE id = ?', req.params.id);
+    const row = await one('SELECT * FROM records WHERE id = ? AND user_id = ?', req.params.id, req.user.id);
     if (!row) return res.status(404).json({ error: 'Registro não encontrado.' });
     const fav = row.favorite ? 0 : 1;
     await run(`UPDATE records SET favorite = ?, updated_at = datetime('now') WHERE id = ?`, fav, row.id);
@@ -170,7 +172,7 @@ router.post('/:id/favorite', async (req, res, next) => {
 
 router.post('/:id/status', async (req, res, next) => {
   try {
-    const row = await one('SELECT * FROM records WHERE id = ?', req.params.id);
+    const row = await one('SELECT * FROM records WHERE id = ? AND user_id = ?', req.params.id, req.user.id);
     if (!row) return res.status(404).json({ error: 'Registro não encontrado.' });
     const status = ['pendente', 'conferido', 'divergente', 'revisar'].includes(req.body.status) ? req.body.status : 'pendente';
     const checkedAt = status === 'conferido' ? new Date().toISOString() : null;

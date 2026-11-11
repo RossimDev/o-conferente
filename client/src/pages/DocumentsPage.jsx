@@ -34,7 +34,7 @@ export default function DocumentsPage() {
         </div>
         <div className="btn-row">
           <Link className="btn" to="/import">＋ Importar</Link>
-          <Link className="btn sm secondary" to="/trash">🗑 Lixeira</Link>
+          <Link className="btn sm secondary" to="/trash">Lixeira</Link>
         </div>
       </div>
 
@@ -58,7 +58,7 @@ export default function DocumentsPage() {
               {d.original_name} {d.archived ? <span className="badge gray">arquivado</span> : null}
             </div>
             <div className="sub">
-              {d.type === 'pdf' ? '📄 PDF' : '🖼 Imagem'} · importação nº {d.seq} · {fmtDate(d.created_at)} ·{' '}
+              {d.type === 'pdf' ? 'PDF' : 'Imagem'} · importação nº {d.seq} · {fmtDate(d.created_at)} ·{' '}
               {d.record_count} registro(s) · {d.page_count} página(s) · {(d.size / 1024).toFixed(0)} KB
             </div>
           </div>

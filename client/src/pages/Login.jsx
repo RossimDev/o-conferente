@@ -7,11 +7,17 @@ import { loadLocalBackup, restoreFromLocal, clearLocalBackup, getSavedUsername }
 export default function Login() {
   const { setUser, needsSetup, setNeedsSetup, notify, health, setHealth } = useApp();
   const nav = useNavigate();
-  const [mode, setMode] = useState('login');
+
+  // Entrar
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const [busy, setBusy] = useState(false);
+  // Criar nova conta
+  const [newName, setNewName] = useState('');
+  const [newUsername, setNewUsername] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+
+  const [busyLogin, setBusyLogin] = useState(false);
+  const [busyRegister, setBusyRegister] = useState(false);
   const [savedAccount, setSavedAccount] = useState(null);
   const [restoring, setRestoring] = useState(false);
 
@@ -20,14 +26,9 @@ export default function Login() {
       setHealth(h);
       setNeedsSetup(!!h.needs_setup);
     }).catch((e) => setHealth({ ok: false, error: e.message }));
-    // Conta salva neste dispositivo: preenche o usuário do último acesso.
     loadLocalBackup().then((s) => setSavedAccount(s)).catch(() => {});
     getSavedUsername().then((u) => { if (u) setUsername(u); }).catch(() => {});
   }, []);
-
-  useEffect(() => {
-    if (needsSetup && !savedAccount) setMode('setup');
-  }, [needsSetup, savedAccount]);
 
   const restoreSaved = async () => {
     setRestoring(true);
@@ -36,8 +37,7 @@ export default function Login() {
       const h = await api('/health');
       setHealth(h);
       setNeedsSetup(!!h.needs_setup);
-      setMode('login');
-      notify('Conta e dados restaurados! Entre com sua senha.');
+      notify('Conta e dados restaurados. Entre com sua senha.');
     } catch (err) {
       notify(err.message, 'err');
     } finally {
@@ -48,25 +48,38 @@ export default function Login() {
   const startFresh = async () => {
     await clearLocalBackup();
     setSavedAccount(null);
-    setNeedsSetup(true);
-    setMode('setup');
+    setNeedsSetup(false);
   };
 
-  const submit = async (e) => {
+  const doLogin = async (e) => {
     e.preventDefault();
-    setBusy(true);
+    setBusyLogin(true);
     try {
-      const path = mode === 'setup' ? '/auth/setup' : '/auth/login';
-      const body = mode === 'setup' ? { username, password, name } : { username, password };
-      const r = await api(path, { method: 'POST', body });
+      const r = await api('/auth/login', { method: 'POST', body: { username, password } });
       setToken(r.token);
       setUser(r.user);
-      notify(mode === 'setup' ? 'Administrador criado. Bem-vindo!' : `Bem-vindo, ${r.user.name || r.user.username}!`);
+      notify(`Bem-vindo, ${r.user.name || r.user.username}.`);
       nav('/');
     } catch (err) {
       notify(err.message, 'err');
     } finally {
-      setBusy(false);
+      setBusyLogin(false);
+    }
+  };
+
+  const doRegister = async (e) => {
+    e.preventDefault();
+    setBusyRegister(true);
+    try {
+      const r = await api('/auth/register', { method: 'POST', body: { username: newUsername, password: newPassword, name: newName } });
+      setToken(r.token);
+      setUser(r.user);
+      notify('Conta criada com sucesso. Bem-vindo.');
+      nav('/');
+    } catch (err) {
+      notify(err.message, 'err');
+    } finally {
+      setBusyRegister(false);
     }
   };
 
@@ -78,13 +91,13 @@ export default function Login() {
             <img src="/icon-192.png" alt="" width="46" height="46" />
             <span>O Conferente</span>
           </div>
-          <h2 style={{ textAlign: 'center' }}>Banco de dados indisponível</h2>
+          <h2 className="center">Banco de dados indisponível</h2>
           <p className="muted">
             O aplicativo está publicado, mas não foi possível acessar o banco de dados no momento.
             Isso costuma ser temporário — aguarde alguns segundos e tente novamente.
           </p>
-          <p className="muted" style={{ fontSize: '.85rem' }}>
-            Se o problema persistir, verifique os registros do serviço (logs) ou o armazenamento do servidor.
+          <p className="muted hint">
+            Se o problema persistir, verifique os registros do serviço ou o armazenamento do servidor.
           </p>
           <button className="btn secondary" style={{ width: '100%' }} onClick={() => location.reload()}>Tentar novamente</button>
         </div>
@@ -92,60 +105,81 @@ export default function Login() {
     );
   }
 
+  if (needsSetup && savedAccount) {
+    return (
+      <div className="login-wrap">
+        <div className="login-card">
+          <div className="brand">
+            <img src="/icon-192.png" alt="" width="46" height="46" />
+            <span>O Conferente</span>
+          </div>
+          <h2 className="center">Encontramos sua conta neste dispositivo</h2>
+          <p className="muted center">
+            A conta <b>{savedAccount.username || 'salva'}</b> e tudo o que foi feito nela
+            {savedAccount.savedAt ? ` (última cópia em ${new Date(savedAccount.savedAt).toLocaleString('pt-BR')})` : ''}
+            {' '}estão guardados neste dispositivo.
+          </p>
+          <button className="btn" style={{ width: '100%' }} onClick={restoreSaved} disabled={restoring}>
+            {restoring ? 'Restaurando…' : 'Restaurar conta e dados'}
+          </button>
+          <button className="btn secondary" style={{ width: '100%', marginTop: 10 }} onClick={startFresh}>
+            Não é você? Começar do zero
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="login-wrap">
-      <div className="login-card">
-        <div className="brand">
-          <img src="/icon-192.png" alt="" width="46" height="46" />
-          <span>O Conferente</span>
-        </div>
+      <div className="login-panels">
+        <section className="login-card">
+          <div className="brand">
+            <img src="/icon-192.png" alt="" width="42" height="42" />
+            <span>O Conferente</span>
+          </div>
+          <h2>Entrar</h2>
+          <p className="muted">Acesse sua conta para continuar de onde parou.</p>
+          <form onSubmit={doLogin}>
+            <label className="field">Usuário
+              <input value={username} onChange={(e) => setUsername(e.target.value)} required autoFocus autoComplete="username" />
+            </label>
+            <label className="field">Senha
+              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
+            </label>
+            <button className="btn" style={{ width: '100%' }} disabled={busyLogin}>
+              {busyLogin ? 'Aguarde…' : 'Entrar'}
+            </button>
+          </form>
+          {savedAccount && (
+            <p className="muted hint center">
+              Conta <b>{savedAccount.username || 'salva'}</b> guardada neste dispositivo.
+              {' '}<button type="button" className="linklike" onClick={startFresh}>Esquecer este dispositivo</button>
+            </p>
+          )}
+        </section>
 
-        {needsSetup && savedAccount ? (
-          <>
-            <h2 style={{ textAlign: 'center' }}>Encontramos sua conta neste dispositivo</h2>
-            <p className="muted" style={{ textAlign: 'center' }}>
-              A conta <b>{savedAccount.username || 'salva'}</b> e tudo o que foi feito nela
-              {savedAccount.savedAt ? ` (última cópia em ${new Date(savedAccount.savedAt).toLocaleString('pt-BR')})` : ''}
-              {' '}estão guardados neste dispositivo.
-            </p>
-            <button className="btn" style={{ width: '100%' }} onClick={restoreSaved} disabled={restoring}>
-              {restoring ? 'Restaurando…' : 'Restaurar conta e dados'}
+        <section className="login-card">
+          <h2>Criar nova conta</h2>
+          <p className="muted">Cadastre-se para importar documentos e realizar conferências.</p>
+          <form onSubmit={doRegister}>
+            <label className="field">Nome
+              <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Seu nome" autoComplete="name" />
+            </label>
+            <label className="field">Usuário
+              <input value={newUsername} onChange={(e) => setNewUsername(e.target.value)} required autoComplete="username" placeholder="3 a 32 caracteres" />
+            </label>
+            <label className="field">Senha
+              <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={6} autoComplete="new-password" placeholder="Mínimo de 6 caracteres" />
+            </label>
+            <button className="btn" style={{ width: '100%' }} disabled={busyRegister}>
+              {busyRegister ? 'Aguarde…' : 'Criar conta'}
             </button>
-            <button className="btn secondary" style={{ width: '100%', marginTop: 8 }} onClick={startFresh}>
-              Não é você? Começar do zero
-            </button>
-          </>
-        ) : (
-          <>
-            <p className="center muted" style={{ marginTop: -8, marginBottom: 20 }}>
-              {mode === 'setup'
-                ? 'Configuração inicial — crie a conta do administrador'
-                : 'Entre para acessar seus documentos e conferências'}
-            </p>
-            <form onSubmit={submit}>
-              {mode === 'setup' && (
-                <label className="field">Nome
-                  <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Seu nome" />
-                </label>
-              )}
-              <label className="field">Usuário
-                <input value={username} onChange={(e) => setUsername(e.target.value)} required autoFocus autoComplete="username" />
-              </label>
-              <label className="field">Senha
-                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={mode === 'setup' ? 6 : 1} autoComplete={mode === 'setup' ? 'new-password' : 'current-password'} />
-              </label>
-              <button className="btn" style={{ width: '100%' }} disabled={busy}>
-                {busy ? 'Aguarde…' : mode === 'setup' ? 'Criar administrador e começar' : 'Entrar'}
-              </button>
-            </form>
-            {savedAccount && mode === 'login' && (
-              <p className="muted" style={{ fontSize: '.8rem', textAlign: 'center', marginTop: 14 }}>
-                Conta <b>{savedAccount.username || 'salva'}</b> guardada neste dispositivo.
-                {' '}<button type="button" className="linklike" onClick={startFresh}>Esquecer este dispositivo</button>
-              </p>
-            )}
-          </>
-        )}
+          </form>
+          <p className="muted hint center">
+            Cada conta mantém seus próprios documentos, registros e conferências.
+          </p>
+        </section>
       </div>
     </div>
   );

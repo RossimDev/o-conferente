@@ -82,7 +82,7 @@ export default function ReviewPage() {
     <div>
       <div className="page-head">
         <div>
-          <button className="link-btn" onClick={() => nav('/import')}>← Importações</button>
+          <button className="link-btn" onClick={() => nav('/import')}>Importações</button>
           <h1>Revisão dos dados extraídos</h1>
           <p className="sub">
             {doc.original_name} · importação nº {doc.seq} · {fmtDate(doc.created_at)} · {records.length} registro(s)
@@ -113,7 +113,7 @@ export default function ReviewPage() {
 
       {doc.status === 'revisao' && (
         <div className="card" style={{ borderColor: 'var(--warn)', background: '#fffbeb' }}>
-          <b>⚠ {lowCount} registro(s) com baixa confiança</b>
+          <b>{lowCount} registro(s) com baixa confiança</b>
           <p className="muted">As linhas destacadas em amarelo podem conter erros de leitura. Confira e corrija antes de confirmar. Informações ausentes não foram inventadas — campos vazios indicam que o dado não foi identificado no documento.</p>
         </div>
       )}
@@ -143,8 +143,8 @@ export default function ReviewPage() {
                   <td>{Math.round((r.confidence ?? 1) * 100)}%</td>
                   <td>
                     <div className="btn-row">
-                      <button className="btn sm success" onClick={() => saveRow(r)} title="Salvar linha">✓</button>
-                      <button className="btn sm danger" onClick={() => removeRow(r)} title="Excluir linha">✕</button>
+                      <button className="btn sm success" onClick={() => saveRow(r)} title="Salvar linha">Salvar</button>
+                      <button className="btn sm danger" onClick={() => removeRow(r)} title="Excluir linha">Excluir</button>
                     </div>
                   </td>
                 </tr>

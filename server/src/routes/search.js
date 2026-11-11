@@ -38,8 +38,8 @@ router.get('/', async (req, res, next) => {
       return res.json({ query: raw, exact: [], prefix: [], code_partial: [], similar: [], text: [], totals: { exact: 0, prefix: 0, code_partial: 0, similar: 0, text: 0 } });
     }
 
-    const filters = [];
-    const fparams = [];
+    const filters = ['r.user_id = ?'];
+    const fparams = [req.user.id];
     if (status) { filters.push('r.status = ?'); fparams.push(status); }
     if (document_id) { filters.push('r.document_id = ?'); fparams.push(document_id); }
     if (category) { filters.push('r.category LIKE ?'); fparams.push(`%${category}%`); }

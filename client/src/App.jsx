@@ -138,48 +138,77 @@ export default function App() {
 
   return (
     <Ctx.Provider value={ctx}>
-      <header className="topbar">
-        <NavLink to="/" className="brand">
-          <img src="/icon-192.png" alt="" width="34" height="34" />
-          <span>O Conferente</span>
-        </NavLink>
-        <TopSearch />
-        <nav className="topnav">
-          {NAV.map((n) => (
-            <NavLink key={n.to} to={n.to} end={n.to === '/'} className={({ isActive }) => (isActive ? 'active' : '')}>
-              {n.label}
+      <div className="app-shell">
+        <aside className="sidebar">
+          <NavLink to="/" className="brand">
+            <img src="/icon-192.png" alt="" width="32" height="32" />
+            <span>O Conferente</span>
+          </NavLink>
+          <nav className="side-nav">
+            {NAV.map((n) => (
+              <NavLink key={n.to} to={n.to} end={n.to === '/'} className={({ isActive }) => (isActive ? 'active' : '')}>
+                <NavIcon name={n.icon} />
+                <span>{n.label}</span>
+              </NavLink>
+            ))}
+            <NavLink to="/history" className={({ isActive }) => (isActive ? 'active' : '')}>
+              <NavIcon name="clock" />
+              <span>Histórico</span>
             </NavLink>
-          ))}
-          <button className="link-btn" onClick={logout}>Sair</button>
-        </nav>
-      </header>
+            <NavLink to="/trash" className={({ isActive }) => (isActive ? 'active' : '')}>
+              <NavIcon name="trash" />
+              <span>Lixeira</span>
+            </NavLink>
+          </nav>
+          <div className="side-foot">
+            <div className="user-chip">
+              <span className="avatar">{(user.name || user.username || '?').slice(0, 1).toUpperCase()}</span>
+              <div>
+                <div className="name">{user.name || user.username}</div>
+                <div className="muted hint">{user.role === 'admin' ? 'Administrador' : 'Usuário'}</div>
+              </div>
+            </div>
+            <button className="link-btn" onClick={logout}>Sair</button>
+          </div>
+        </aside>
 
-      {offlinePending > 0 && (
-        <div className="offline-banner">
-          {offlinePending} alteração(ões) offline aguardando sincronização…
-          <button onClick={async () => { const n = await flushOfflineQueue(); notify(`${n} sincronizada(s)`); setOfflinePending(pendingOfflineOps().length); }}>Sincronizar</button>
+        <div className="main-col">
+          <header className="topbar">
+            <TopSearch />
+            <div className="top-actions">
+              <span className="top-user">{user.name || user.username}</span>
+              <button className="link-btn" onClick={logout}>Sair</button>
+            </div>
+          </header>
+
+          {offlinePending > 0 && (
+            <div className="offline-banner">
+              {offlinePending} alteração(ões) offline aguardando sincronização…
+              <button onClick={async () => { const n = await flushOfflineQueue(); notify(`${n} sincronizada(s)`); setOfflinePending(pendingOfflineOps().length); }}>Sincronizar</button>
+            </div>
+          )}
+
+          <main className="content">
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/login" element={<Navigate to="/" />} />
+              <Route path="/search" element={<SearchPage />} />
+              <Route path="/records/:id" element={<RecordDetail />} />
+              <Route path="/import" element={<ImportPage />} />
+              <Route path="/import/:docId/review" element={<ReviewPage />} />
+              <Route path="/database" element={<DatabasePage />} />
+              <Route path="/documents" element={<DocumentsPage />} />
+              <Route path="/documents/:id" element={<DocumentView />} />
+              <Route path="/conference" element={<ConferencePage />} />
+              <Route path="/conference/:id" element={<ConferenceSession />} />
+              <Route path="/history" element={<HistoryPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/trash" element={<TrashPage />} />
+              <Route path="*" element={<Navigate to="/" />} />
+            </Routes>
+          </main>
         </div>
-      )}
-
-      <main className="content">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Navigate to="/" />} />
-          <Route path="/search" element={<SearchPage />} />
-          <Route path="/records/:id" element={<RecordDetail />} />
-          <Route path="/import" element={<ImportPage />} />
-          <Route path="/import/:docId/review" element={<ReviewPage />} />
-          <Route path="/database" element={<DatabasePage />} />
-          <Route path="/documents" element={<DocumentsPage />} />
-          <Route path="/documents/:id" element={<DocumentView />} />
-          <Route path="/conference" element={<ConferencePage />} />
-          <Route path="/conference/:id" element={<ConferenceSession />} />
-          <Route path="/history" element={<HistoryPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/trash" element={<TrashPage />} />
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
-      </main>
+      </div>
 
       <nav className="bottomnav">
         {NAV.map((n) => (
@@ -202,7 +231,9 @@ function NavIcon({ name }) {
     check: 'M9 16.2l-3.5-3.5L4 14.2 9 19l11-11-1.5-1.4z',
     doc: 'M6 2h8l4 4v16H6zM14 2v5h4M9 12h6M9 16h6',
     db: 'M4 6c0-1.7 2.7-3 6-3s6 1.3 6 3-2.7 3-6 3-6-1.3-6-3zm0 0v12c0 1.7 2.7 3 6 3s6-1.3 6-3V6M4 12c0 1.7 2.7 3 6 3s6-1.3 6-3',
-    gear: 'M12 8a4 4 0 100 8 4 4 0 000-8zm9 4l-2-1.2.3-2.3-2.2-.9-1-2.1-2.3.4L12 3l-1.8 1.9-2.3-.4-1 2.1-2.2.9.3 2.3L3 12l2 1.2-.3 2.3 2.2.9 1 2.1 2.3-.4L12 21l1.8-1.9 2.3.4 1-2.1 2.2-.9-.3-2.3z'
+    gear: 'M12 8a4 4 0 100 8 4 4 0 000-8zm9 4l-2-1.2.3-2.3-2.2-.9-1-2.1-2.3.4L12 3l-1.8 1.9-2.3-.4-1 2.1-2.2.9.3 2.3L3 12l2 1.2-.3 2.3 2.2.9 1 2.1 2.3-.4L12 21l1.8-1.9 2.3.4 1-2.1 2.2-.9-.3-2.3z',
+    clock: 'M12 3a9 9 0 100 18 9 9 0 000-18zM12 7v5l3.5 2',
+    trash: 'M4 7h16M9 7V5h6v2m-8 0l1 13h8l1-13M10 11v6M14 11v6'
   }[name];
   return (
     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">

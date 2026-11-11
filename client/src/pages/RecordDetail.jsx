@@ -79,16 +79,16 @@ export default function RecordDetail() {
     <div>
       <div className="page-head">
         <div>
-          <button className="link-btn" onClick={() => nav(-1)}>← Voltar</button>
+          <button className="link-btn" onClick={() => nav(-1)}>Voltar</button>
           <h1 style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
             {r.code ? <span className="code-chip" style={{ fontSize: '1.1rem' }}>{r.code}</span> : <span className="badge gray">sem código</span>}
             <span>{r.name || r.description || 'Registro'}</span>
-            <button className="btn sm secondary" onClick={toggleFav}>{r.favorite ? '⭐ Favorito' : '☆ Favoritar'}</button>
+            <button className="btn sm secondary" onClick={toggleFav}>{r.favorite ? 'Favorito' : 'Favoritar'}</button>
           </h1>
           <p className="sub">
             <span className={`badge ${r.status}`}>{r.status}</span>
             {' '}{r.checked_at && <>conferido em {fmtDate(r.checked_at)}</>}
-            {r.needs_review ? <span className="badge revisar" style={{ marginLeft: 8 }}>⚠ baixa confiança — revise</span> : null}
+            {r.needs_review ? <span className="badge revisar" style={{ marginLeft: 8 }}>baixa confiança — revise</span> : null}
           </p>
         </div>
         <div className="btn-row">
@@ -146,7 +146,7 @@ export default function RecordDetail() {
             <button className="btn" onClick={openInDoc} disabled={!doc || !doc.file_available}>Abrir no documento na página {r.page || 1}</button>
             {doc && <a className="btn secondary" href={downloadUrl(`/documents/${doc.id}/file`, { download: 1 })}>Baixar original</a>}
           </div>
-          {doc && !doc.file_available && <p className="mt" style={{ color: 'var(--warn)', fontWeight: 600 }}>⚠ O documento de origem não está mais disponível. Os dados do registro foram preservados.</p>}
+          {doc && !doc.file_available && <p className="mt" style={{ color: 'var(--warn)', fontWeight: 600 }}>O documento de origem não está mais disponível. Os dados do registro foram preservados.</p>}
           {r.snippet && (
             <>
               <h3 className="mt">Trecho original utilizado</h3>
@@ -165,7 +165,7 @@ export default function RecordDetail() {
               {s.label}
             </button>
           ))}
-          <Link className="btn sm ghost" to="/conference">Ir para sessões de conferência →</Link>
+          <Link className="btn sm ghost" to="/conference">Ir para sessões de conferência</Link>
         </div>
       </div>
 
